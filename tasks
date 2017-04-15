@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ ! -f ./releaser ]];then
-  wget http://gogs.ai-traders.com/platform/releaser/raw/0.2.1/src/releaser || { echo "failed to wget releaser"; exit 1; }
+  wget http://http.archive.ai-traders.com/releaser/0.3.0/releaser || { echo "failed to wget releaser"; exit 1; }
 fi
 source ./releaser
 releaser_init
@@ -23,6 +23,12 @@ case "${command}" in
   release)
       verify_version_no_version_file
       git_tag_from_oversion
+      exit $?
+      ;;
+  publish)
+      # publish the just released version
+      version=$(get_last_git_tagged_version)
+      publish_to_archive "docker-ops" "${version}" "src/docker-ops"
       exit $?
       ;;
   *)

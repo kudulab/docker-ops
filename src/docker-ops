@@ -9,7 +9,7 @@ program_name() {
   echo "DOCKER-OPS"
 }
 log_debug() {
-  if [ "$RELEASER_LOG_LEVEL" == "debug" ]; then
+  if [ "${RELEASER_LOG_LEVEL}" == "debug" ]; then
     echo -e "$(date "+%d-%m-%Y %T") $(program_name) debug: ${1}" >&2
   fi
 }

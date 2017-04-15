@@ -45,3 +45,16 @@ pipelines:
                     arguments:
                       - -c
                       - ./tasks release
+      - publish:
+          clean_workspace: true
+          jobs:
+            code:
+              resources:
+                - docker
+                - small
+              tasks:
+                - exec:
+                    command: /bin/bash
+                    arguments:
+                      - -c
+                      - ./tasks publish

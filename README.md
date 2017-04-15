@@ -12,12 +12,12 @@ Make your `tasks` file like this:
 #!/bin/bash
 
 if [[ ! -f ./releaser ]];then
-  wget http://gogs.ai-traders.com/platform/releaser/raw/0.2.1/src/releaser || { echo "failed to wget releaser"; exit 1; }
+  wget http://http.archive.ai-traders.com/releaser/0.3.0/releaser || { echo "failed to wget releaser"; exit 1; }
 fi
 source ./releaser
 releaser_init
 if [[ ! -f ./docker-ops ]];then
-  wget http://gogs.ai-traders.com/platform/docker-ops/raw/0.1.0/src/docker-ops || { echo "failed to wget docker-ops"; exit 1; }
+  wget http://http.archive.ai-traders.com/docker-ops/0.1.1/docker-ops || { echo "failed to wget docker-ops"; exit 1; }
 fi
 source ./docker-ops
 
