@@ -12,7 +12,7 @@ pipelines:
       - test:
           clean_workspace: true
           jobs:
-            validate_repo:
+            verify_version:
               resources:
                 - docker
                 - small
