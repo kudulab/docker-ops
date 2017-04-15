@@ -27,8 +27,9 @@ log_warn() {
 
 function docker_build {
   image_dir="$1"
-  image_name="$2"
-  image_tag="$3"
+  imagerc_filename="$2"
+  image_name="$3"
+  image_tag="$4"
 
   if [[ -z "${image_dir}" ]];then
     log_error "image_dir not set"
@@ -40,6 +41,11 @@ function docker_build {
     return 1
   fi
   log_info "image_name set to: ${image_name}"
+  if [[ -z "${imagerc_filename}" ]];then
+    log_error "imagerc_filename not set"
+    return 1
+  fi
+  log_info "imagerc_filename set to: ${imagerc_filename}"
   initial_dir="$(pwd)"
   cd "${image_dir}"
   if [[ -z "${image_tag}" ]];then
@@ -50,17 +56,17 @@ function docker_build {
 
   set -x
   docker build -t "${image_name}:${image_tag}" .
-  echo "export AIT_DOCKER_IMAGE_NAME=\"${image_name}\"" > imagerc
-  echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> imagerc
+  echo "export AIT_DOCKER_IMAGE_NAME=\"${image_name}\"" > "${imagerc_filename}"
+  echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${imagerc_filename}"
 
-  echo "{ \"docker_image_name\":\"${image_name}\"," > imagerc.json
-  echo "\"docker_image_tag\":\"${image_tag}\"," >> imagerc.json
-  echo "\"docker_image_url\":\"${image_name}:${image_tag}\" }" >> imagerc.json
+  echo "{ \"docker_image_name\":\"${image_name}\"," > "${imagerc_filename}.json"
+  echo "\"docker_image_tag\":\"${image_tag}\"," >> "${imagerc_filename}.json"
+  echo "\"docker_image_url\":\"${image_name}:${image_tag}\" }" >> "${imagerc_filename}.json"
 
-  echo "---" > imagerc.yml
-  echo "docker_image_name: ${image_name}" >> imagerc.yml
-  echo "docker_image_tag:${image_tag}" >> imagerc.yml
-  echo "docker_image_url:${image_name}:${image_tag}" >> imagerc.yml
+  echo "---" > "${imagerc_filename}.yml"
+  echo "docker_image_name: ${image_name}" >> "${imagerc_filename}.yml"
+  echo "docker_image_tag:${image_tag}" >> "${imagerc_filename}.yml"
+  echo "docker_image_url:${image_name}:${image_tag}" >> "${imagerc_filename}.yml"
   if [[ "${dryrun}" != "true" ]];then
     docker push "${image_name}:${image_tag}"
   fi
@@ -69,12 +75,19 @@ function docker_build {
 }
 function source_imagerc {
   image_dir="$1"
+  imagerc_filename="$2"
 
   if [[ -z "${image_dir}" ]];then
     log_error "image_dir not set"
     return 1
   fi
-  source "${image_dir}/imagerc"
+  if [[ -z "${imagerc_filename}" ]];then
+    log_error "imagerc_filename not set"
+    return 1
+  fi
+  set -x
+  source "${image_dir}/${imagerc_filename}"
+  set +x
 }
 function docker_push {
   image_name="$1"
@@ -96,13 +109,14 @@ function docker_push {
     return 1
   fi
   log_info "production_image_tag set to: ${production_image_tag}"
-  set -x
   if ! docker images ${image_name} | awk '{print $2}' | grep ${testing_image_tag} 1>/dev/null ; then
     # if docker image does not exist locally, then "docker tag" will fail,
     # so pull it. However, do not always pull it, the image may be not pushed
     # and only available locally.
+    set -x
     docker pull "${image_name}:${testing_image_tag}"
   fi
+  set -x
   # When tagging a docker image using docker 1.8.3, we can use `docker tag -f`.
   # When using docker 1.12, there is no `-f` option, but `docker tag`
   # always works as if force was used.
@@ -114,3 +128,6 @@ function docker_push {
   fi
   set +x
 }
+
+### Defaults
+imagerc_filename="imagerc"
