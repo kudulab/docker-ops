@@ -1,0 +1,47 @@
+pipelines:
+  docker-ops:
+    group: platform
+    label_template: "${git[:8]}"
+    materials:
+      git:
+        git: "git@git.ai-traders.com:platform/docker-ops.git"
+        branch: master
+        blacklist:
+          - "**/*.md"
+    stages:
+      - test:
+          clean_workspace: true
+          jobs:
+            validate_repo:
+              resources:
+                - docker
+                - small
+              tasks:
+                - exec:
+                    command: /bin/bash
+                    arguments:
+                      - -c
+                      - ./tasks verify_version
+            itest:
+              resources:
+                - docker
+                - small
+              tasks:
+                - exec:
+                    command: bash
+                    arguments:
+                      - -c
+                      - ./tasks itest
+      - release:
+          clean_workspace: true
+          jobs:
+            code:
+              resources:
+                - docker
+                - small
+              tasks:
+                - exec:
+                    command: /bin/bash
+                    arguments:
+                      - -c
+                      - ./tasks release

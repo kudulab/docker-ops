@@ -1,0 +1,36 @@
+#!/bin/bash
+
+if [[ ! -f ./releaser ]];then
+  wget http://gogs.ai-traders.com/platform/releaser/raw/0.2.1/src/releaser
+fi
+source ./releaser
+releaser_init
+
+command="$1"
+case "${command}" in
+  bump)
+      bump_changelog_and_oversion "$2"
+      exit $?
+      ;;
+  verify_version)
+      verify_version_no_version_file
+      exit $?
+      ;;
+  unit)
+      time bats ./test/unit/*.bats
+      exit $?
+      ;;
+  itest)
+      time bats ./test/integration/*.bats
+      exit $?
+      ;;
+  release)
+      verify_version_no_version_file
+      git_tag_from_oversion
+      exit $?
+      ;;
+  *)
+      echo "Invalid command: '${command}'"
+      return 1
+      ;;
+esac

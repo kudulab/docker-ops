@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if [[ ! -f ./releaser ]];then
+  wget http://gogs.ai-traders.com/platform/releaser/raw/0.2.1/src/releaser
+fi
+source ./releaser
+releaser_init
+
+docker_ops=$(readlink -f ../../../../src/docker-ops)
+source ${docker_ops}
+
+command="$1"
+case "${command}" in
+  build)
+      docker_build "$2"
+      exit $?
+      ;;
+  publish)
+      docker_push
+      exit $?
+      ;;
+  *)
+      echo "Invalid command: '${command}'"
+      exit 1
+      ;;
+esac

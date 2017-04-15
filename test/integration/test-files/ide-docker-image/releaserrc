@@ -1,0 +1,2 @@
+image_name="docker-registry.ai-traders.com/docker-ops-test"
+image_dir="./image"

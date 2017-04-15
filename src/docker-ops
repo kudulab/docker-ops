@@ -1,0 +1,101 @@
+#!/bin/bash
+
+set -e
+
+# Each log output goes to stderrr, so that we can return value from functions
+# with stdout. (Curl does the same).
+
+program_name() {
+  echo "DOCKER-OPS"
+}
+log_debug() {
+  if [ "$RELEASER_LOG_LEVEL" == "debug" ]; then
+    echo -e "$(date "+%d-%m-%Y %T") $(program_name) debug: ${1}" >&2
+  fi
+}
+log_info() {
+  echo -e "$(date "+%d-%m-%Y %T") $(program_name) info: ${1}" >&2
+}
+log_error() {
+  echo -e "\e[31m$(date "+%d-%m-%Y %T") $(program_name) error: $1\e[0m" >&2
+  echo -e "\e[31m$(date "+%d-%m-%Y %T") $(program_name) error: File: ${BASH_SOURCE[0]}\e[0m" >&2
+  echo -e "\e[31m$(date "+%d-%m-%Y %T") $(program_name) error: Line numbers: ${BASH_LINENO[*]}\e[0m" >&2
+}
+log_warn() {
+  echo -e "\e[33m$(date "+%d-%m-%Y %T") $(program_name) warn: $1\e[0m" >&2
+}
+
+function docker_build {
+  image_tag="$1"
+
+  if [[ -z "${image_dir}" ]];then
+    log_error "image_dir not set"
+    return 1
+  fi
+  log_info "image_dir set to: ${image_dir}"
+  if [[ -z "${image_name}" ]];then
+    log_error "image_name not set"
+    return 1
+  fi
+  log_info "image_name set to: ${image_name}"
+  if [[ -z "${image_tag}" ]];then
+    # set to the latest git commit hash
+    image_tag=$(git rev-parse HEAD)
+  fi
+  log_info "image_tag set to: ${image_tag}"
+  set -x
+  initial_dir="$(pwd)"
+  cd "${image_dir}"
+  docker build -t "${image_name}:${image_tag}" .
+
+  echo "export AIT_DOCKER_IMAGE_NAME=\"${image_name}\"" > imagerc
+  echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> imagerc
+
+  echo "{ \"docker_image_name\":\"${image_name}\"," > imagerc.json
+  echo "\"docker_image_tag\":\"${image_tag}\"," >> imagerc.json
+  echo "\"docker_image_url\":\"${image_name}:${image_tag}\" }" >> imagerc.json
+
+  echo "---" > imagerc.yml
+  echo "docker_image_name: ${image_name}" >> imagerc.yml
+  echo "docker_image_tag:${image_tag}" >> imagerc.yml
+  echo "docker_image_url:${image_name}:${image_tag}" >> imagerc.yml
+
+  if [[ "${dryrun}" != "true" ]];then
+    docker push "${image_name}:${image_tag}"
+  fi
+  cd "${initial_dir}"
+  set +x
+}
+function docker_push {
+  image_tag="$1"
+
+  if [[ -z "${image_name}" ]];then
+    log_error "image_name not set"
+    return 1
+  fi
+  log_info "image_name set to: ${image_name}"
+  if [[ -z "${image_tag}" ]];then
+    if [[ ! -f ./releaser ]];then
+      wget http://gogs.ai-traders.com/platform/releaser/raw/0.2.1/src/releaser
+    fi
+    source ./releaser
+    image_tag="$(get_next_version)"
+  fi
+  log_info "image_tag set to: ${image_tag}"
+  testing_image_tag=$(git rev-parse HEAD)
+  log_info "testing_image_tag set to: ${testing_image_tag}"
+  set -x
+  if ! docker images ${image_name} | awk '{print $2}' | grep ${testing_image_tag} 1>/dev/null ; then
+    # if docker image does not exist locally, then "docker tag" will fail,
+    # so pull it. However, do not always pull it, the image may be not pushed
+    # and only available locally.
+    docker pull "${image_name}:${testing_image_tag}"
+  fi
+  docker tag "${image_name}:${testing_image_tag}" "${image_name}:${image_tag}"
+  docker tag "${image_name}:${testing_image_tag}" "${image_name}:latest"
+  if [[ "${dryrun}" != "true" ]];then
+    docker push "${image_name}:${image_tag}"
+    docker push "${image_name}:latest"
+  fi
+  set +x
+}
