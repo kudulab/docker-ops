@@ -16,10 +16,6 @@ case "${command}" in
       verify_version_no_version_file
       exit $?
       ;;
-  unit)
-      time bats ./test/unit/*.bats
-      exit $?
-      ;;
   itest)
       time bats ./test/integration/*.bats
       exit $?

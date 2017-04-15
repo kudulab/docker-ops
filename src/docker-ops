@@ -26,7 +26,9 @@ log_warn() {
 }
 
 function docker_build {
-  image_tag="$1"
+  image_dir="$1"
+  image_name="$2"
+  image_tag="$3"
 
   if [[ -z "${image_dir}" ]];then
     log_error "image_dir not set"
@@ -38,16 +40,16 @@ function docker_build {
     return 1
   fi
   log_info "image_name set to: ${image_name}"
+  initial_dir="$(pwd)"
+  cd "${image_dir}"
   if [[ -z "${image_tag}" ]];then
     # set to the latest git commit hash
     image_tag=$(git rev-parse HEAD)
   fi
   log_info "image_tag set to: ${image_tag}"
-  set -x
-  initial_dir="$(pwd)"
-  cd "${image_dir}"
-  docker build -t "${image_name}:${image_tag}" .
 
+  set -x
+  docker build -t "${image_name}:${image_tag}" .
   echo "export AIT_DOCKER_IMAGE_NAME=\"${image_name}\"" > imagerc
   echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> imagerc
 
@@ -59,31 +61,41 @@ function docker_build {
   echo "docker_image_name: ${image_name}" >> imagerc.yml
   echo "docker_image_tag:${image_tag}" >> imagerc.yml
   echo "docker_image_url:${image_name}:${image_tag}" >> imagerc.yml
-
   if [[ "${dryrun}" != "true" ]];then
     docker push "${image_name}:${image_tag}"
   fi
   cd "${initial_dir}"
   set +x
 }
+function source_imagerc {
+  image_dir="$1"
+
+  if [[ -z "${image_dir}" ]];then
+    log_error "image_dir not set"
+    return 1
+  fi
+  source "${image_dir}/imagerc"
+}
 function docker_push {
-  image_tag="$1"
+  image_name="$1"
+  testing_image_tag="$2"
+  production_image_tag="$3"
 
   if [[ -z "${image_name}" ]];then
     log_error "image_name not set"
     return 1
   fi
   log_info "image_name set to: ${image_name}"
-  if [[ -z "${image_tag}" ]];then
-    if [[ ! -f ./releaser ]];then
-      wget http://gogs.ai-traders.com/platform/releaser/raw/0.2.1/src/releaser
-    fi
-    source ./releaser
-    image_tag="$(get_next_version)"
+  if [[ -z "${testing_image_tag}" ]];then
+    log_error "testing_image_tag not set"
+    return 1
   fi
-  log_info "image_tag set to: ${image_tag}"
-  testing_image_tag=$(git rev-parse HEAD)
   log_info "testing_image_tag set to: ${testing_image_tag}"
+  if [[ -z "${production_image_tag}" ]];then
+    log_error "production_image_tag not set"
+    return 1
+  fi
+  log_info "production_image_tag set to: ${production_image_tag}"
   set -x
   if ! docker images ${image_name} | awk '{print $2}' | grep ${testing_image_tag} 1>/dev/null ; then
     # if docker image does not exist locally, then "docker tag" will fail,
@@ -91,8 +103,8 @@ function docker_push {
     # and only available locally.
     docker pull "${image_name}:${testing_image_tag}"
   fi
-  docker tag "${image_name}:${testing_image_tag}" "${image_name}:${image_tag}"
-  docker tag "${image_name}:${testing_image_tag}" "${image_name}:latest"
+  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:${image_tag}"
+  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:latest"
   if [[ "${dryrun}" != "true" ]];then
     docker push "${image_name}:${image_tag}"
     docker push "${image_name}:latest"

@@ -11,11 +11,14 @@ function clean_docker_images {
   done
 }
 
-@test "build returns 0" {
+@test "build returns 0 with dryrun" {
   clean_docker_images
 
   rm -rf "${ide_docker_image_dir}/.git"
   run /bin/bash -c "cd ${ide_docker_image_dir} && git init && git add --all && git commit -m first && dryrun=true ./tasks build"
+  # those will be visible on bats failure
+  echo "status = ${status}"
+  echo "output = ${output}"
   assert_output --partial "docker build -t docker-registry.ai-traders.com/docker-ops-test"
   assert_equal "$status" 0
 
@@ -28,19 +31,21 @@ function clean_docker_images {
   run /bin/bash -c "cat ${ide_docker_image_dir}/image/imagerc.yml | grep 'docker_image_name: docker-registry.ai-traders.com/docker-ops-test'"
   assert_equal "$status" 0
 
-  cd ${ide_docker_image_dir} && git reset --hard
-  # do not rm .git directory, it is needed in publish test
-  rm "${ide_docker_image_dir}/image/imagerc"*
+  # do not rm .git directory or imagerc* files, they are needed in publish test
 }
-@test "publish returns 0" {
+@test "publish returns 0 with dryrun" {
   # do not rm .git directory, reuse it from build test
   run /bin/bash -c "cd ${ide_docker_image_dir} && git tag 0.1.1 && dryrun=true ./tasks publish"
+  # those will be visible on bats failure
+  echo "status = ${status}"
+  echo "output = ${output}"
   assert_output --partial "docker tag docker-registry.ai-traders.com/docker-ops-test"
   assert_output --partial "docker-registry.ai-traders.com/docker-ops-test:latest"
   assert_equal "$status" 0
 
   cd ${ide_docker_image_dir} && git reset --hard
   rm -rf "${ide_docker_image_dir}/.git"
+  rm "${ide_docker_image_dir}/image/imagerc"*
 
   clean_docker_images
 }

@@ -12,11 +12,13 @@ source ${docker_ops}
 command="$1"
 case "${command}" in
   build)
-      docker_build "$2"
+      docker_build "${image_dir}" "${image_name}" "$2"
       exit $?
       ;;
   publish)
-      docker_push
+      source_imagerc "${image_dir}"
+      production_image_tag="$(get_next_version)"
+      docker_push "${AIT_DOCKER_IMAGE_NAME}" "${AIT_DOCKER_IMAGE_TAG}" "${production_image_tag}"
       exit $?
       ;;
   *)
