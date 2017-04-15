@@ -103,10 +103,13 @@ function docker_push {
     # and only available locally.
     docker pull "${image_name}:${testing_image_tag}"
   fi
-  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:${image_tag}"
-  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:latest"
+  # When tagging a docker image using docker 1.8.3, we can use `docker tag -f`.
+  # When using docker 1.12, there is no `-f` option, but `docker tag`
+  # always works as if force was used.
+  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:${production_image_tag}" || docker tag "${image_name}:${testing_image_tag}" "${image_name}:${production_image_tag}"
+  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:latest" || docker tag "${image_name}:${testing_image_tag}" "${image_name}:latest"
   if [[ "${dryrun}" != "true" ]];then
-    docker push "${image_name}:${image_tag}"
+    docker push "${image_name}:${production_image_tag}"
     docker push "${image_name}:latest"
   fi
   set +x

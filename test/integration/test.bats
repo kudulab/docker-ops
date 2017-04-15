@@ -35,12 +35,22 @@ function clean_docker_images {
 }
 @test "publish returns 0 with dryrun" {
   # do not rm .git directory, reuse it from build test
-  run /bin/bash -c "cd ${ide_docker_image_dir} && git tag 0.1.1 && dryrun=true ./tasks publish"
+  run /bin/bash -c "cd ${ide_docker_image_dir} && dryrun=true ./tasks publish"
   # those will be visible on bats failure
   echo "status = ${status}"
   echo "output = ${output}"
-  assert_output --partial "docker tag docker-registry.ai-traders.com/docker-ops-test"
+  assert_output --partial "docker tag -f docker-registry.ai-traders.com/docker-ops-test"
   assert_output --partial "docker-registry.ai-traders.com/docker-ops-test:latest"
+  assert_equal "$status" 0
+
+  run /bin/bash -c "docker images \"docker-registry.ai-traders.com/docker-ops-test\" | awk '{print $2}' | grep latest"
+  echo "status = ${status}"
+  echo "output = ${output}"
+  assert_equal "$status" 0
+
+  run /bin/bash -c "docker images \"docker-registry.ai-traders.com/docker-ops-test\" | awk '{print $2}' | grep '0.1.0'"
+  echo "status = ${status}"
+  echo "output = ${output}"
   assert_equal "$status" 0
 
   cd ${ide_docker_image_dir} && git reset --hard
