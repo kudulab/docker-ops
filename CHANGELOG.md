@@ -1,3 +1,7 @@
+### 0.1.2 (2017-Apr-15)
+
+* respect docker_build_options variable in docker_build function
+
 ### 0.1.1 (2017-Apr-15)
 
 * \#10892 support custom imagerc filename

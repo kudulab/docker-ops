@@ -55,7 +55,7 @@ function docker_build {
   log_info "image_tag set to: ${image_tag}"
 
   set -x
-  docker build -t "${image_name}:${image_tag}" .
+  docker build ${docker_build_options} -t "${image_name}:${image_tag}" .
   echo "export AIT_DOCKER_IMAGE_NAME=\"${image_name}\"" > "${imagerc_filename}"
   echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${imagerc_filename}"
 
@@ -131,3 +131,4 @@ function docker_push {
 
 ### Defaults
 imagerc_filename="imagerc"
+docker_build_options=""
