@@ -1,9 +1,13 @@
 #!/bin/bash
 
-set -e
-
-# Each log output goes to stderrr, so that we can return value from functions
+################################################################################
+# Generally:
+# * Each log output goes to stderrr, so that we can return value from functions
 # with stdout. (Curl does the same).
+# * Do not set here: `set -e`, because after this script is sourced, then
+# using it interactively would be troublesome: exit on each failure and
+# bash completion results in exit too.
+################################################################################
 
 program_name() {
   echo "DOCKER-OPS"
@@ -23,6 +27,13 @@ log_error() {
 }
 log_warn() {
   echo -e "\e[33m$(date "+%d-%m-%Y %T") $(program_name) warn: $1\e[0m" >&2
+}
+
+# In order to load all the docker-ops functions once you can run:
+# docker_ops || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.3/docker-ops)"
+# Or you can simply wget that file and source it.
+function docker_ops_loaded {
+  return 0
 }
 
 function docker_build {
@@ -54,7 +65,7 @@ function docker_build {
   fi
   log_info "image_tag set to: ${image_tag}"
 
-  set -x
+  set -x -e
   docker build ${docker_build_options} -t "${image_name}:${image_tag}" .
   echo "export AIT_DOCKER_IMAGE_NAME=\"${image_name}\"" > "${imagerc_filename}"
   echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${imagerc_filename}"
@@ -71,7 +82,7 @@ function docker_build {
     docker push "${image_name}:${image_tag}"
   fi
   cd "${initial_dir}"
-  set +x
+  set +x +e
 }
 function source_imagerc {
   image_dir="$1"
@@ -85,9 +96,9 @@ function source_imagerc {
     log_error "imagerc_filename not set"
     return 1
   fi
-  set -x
+  set -x -e
   source "${image_dir}/${imagerc_filename}"
-  set +x
+  set +x +e
 }
 function docker_push {
   image_name="$1"
@@ -113,10 +124,10 @@ function docker_push {
     # if docker image does not exist locally, then "docker tag" will fail,
     # so pull it. However, do not always pull it, the image may be not pushed
     # and only available locally.
-    set -x
+    set -x -e
     docker pull "${image_name}:${testing_image_tag}"
   fi
-  set -x
+  set -x -e
   # When tagging a docker image using docker 1.8.3, we can use `docker tag -f`.
   # When using docker 1.12, there is no `-f` option, but `docker tag`
   # always works as if force was used.
@@ -126,7 +137,7 @@ function docker_push {
     docker push "${image_name}:${production_image_tag}"
     docker push "${image_name}:latest"
   fi
-  set +x
+  set +x +e
 }
 
 ### Defaults

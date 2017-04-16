@@ -1,22 +1,55 @@
 # docker-ops
 
+Bash scripts to release docker images.
+
+## Install
+All the docker-ops functions are available after you install it.
+
+### In current shell
+If you want to run releaser in current shell:
+```bash
+docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.3/docker-ops)"
+```
+ Do not use it in a script as it would always redownload the file.
+
+### In a script
+
+If you want to run docker-ops from a script:
+```bash
+if [[ ! -f ./docker-ops ]];then
+  wget http://archive.ai-traders.com/docker-ops/0.1.3/docker-ops || { echo "failed to wget docker-ops"; exit 1; }
+fi
+source docker-ops
+```
+
+### Validate that loaded
+
+To validate that releaser functions are loaded use: `docker_ops_loaded` function
+or any other docker-ops function.
+
+### Dependencies
+* Bash
+* Docker
+
 ## Usage
-Make your `releaserrc` file like this:
+Recommended usage for a project:
+1. Provide `./releaserrc` file to set variables (this is optional). Example:
 ```
 image_name="docker-registry.ai-traders.com/docker-ops-test"
 image_dir="./image"
 ```
-
-Make your `tasks` file like this:
+1. Provide `./tasks` file with bash `case` (switch). It will allow to run
+ a limited amount of commands). Example:
 ```bash
 #!/bin/bash
 
+set -e
 if [[ ! -f ./releaser ]];then
-  wget http://http.archive.ai-traders.com/releaser/0.3.0/releaser || { echo "failed to wget releaser"; exit 1; }
+  wget http://http.archive.ai-traders.com/releaser/0.3.1/releaser
 fi
 source ./releaser
 if [[ ! -f ./docker-ops ]];then
-  wget http://http.archive.ai-traders.com/docker-ops/0.1.1/docker-ops || { echo "failed to wget docker-ops"; exit 1; }
+  wget http://http.archive.ai-traders.com/docker-ops/0.1.3/docker-ops
 fi
 source ./docker-ops
 # This must go as last in order to let user variables override default values
@@ -39,6 +72,7 @@ case "${command}" in
       exit 1
       ;;
 esac
+set +e
 ```
 
 Now you can run:
@@ -47,4 +81,9 @@ Now you can run:
 ./tasks publish
 ```
 
-You can set `dryrun=true` to prevent `docker push` operations.
+### Docker-ops functions
+The docker-ops functions should be documented in code, there is no sense to repeat it here.
+
+You can set those environment variables:
+  * `dryrun=true` to avoid docker push.
+  * `RELEASER_LOG_LEVEL=debug` for more log messages.

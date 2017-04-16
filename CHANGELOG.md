@@ -1,3 +1,8 @@
+### 0.1.3 (2017-Apr-16)
+
+* do not set `set -e` in docker-ops main file
+* better readme
+
 ### 0.1.2 (2017-Apr-15)
 
 * respect docker_build_options variable in docker_build function
