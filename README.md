@@ -17,7 +17,7 @@ docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.3
 If you want to run docker-ops from a script:
 ```bash
 if [[ ! -f ./docker-ops ]];then
-  wget http://archive.ai-traders.com/docker-ops/0.1.3/docker-ops || { echo "failed to wget docker-ops"; exit 1; }
+  wget http://archive.ai-traders.com/docker-ops/0.1.3/docker-ops
 fi
 source docker-ops
 ```

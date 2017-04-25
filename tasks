@@ -2,7 +2,7 @@
 
 set -e
 if [[ ! -f ./releaser ]];then
-  wget http://http.archive.ai-traders.com/releaser/0.3.1/releaser
+  wget http://http.archive.ai-traders.com/releaser/0.3.2/releaser
 fi
 source ./releaser
 releaser_init

@@ -1,3 +1,7 @@
+### 0.2.0 (2017-Apr-25)
+
+* by default do not push docker image on build. Settable with `ops_docker_push`
+
 ### 0.1.3 (2017-Apr-16)
 
 * do not set `set -e` in docker-ops main file

@@ -1,7 +1,8 @@
 #!/bin/bash
 
+set -e
 if [[ ! -f ./releaser ]];then
-  wget http://http.archive.ai-traders.com/releaser/0.3.0/releaser || { echo "failed to wget releaser"; exit 1; }
+  wget http://http.archive.ai-traders.com/releaser/0.3.2/releaser
 fi
 source ./releaser
 docker_ops=$(readlink -f ../../../../src/docker-ops)
@@ -26,3 +27,4 @@ case "${command}" in
       exit 1
       ;;
 esac
+set +e
