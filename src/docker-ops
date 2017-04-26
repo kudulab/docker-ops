@@ -141,6 +141,7 @@ function docker_push {
 }
 
 ### Defaults
-imagerc_filename="imagerc"
-docker_build_options=""
-ops_docker_push="false"
+# allow those variables to be already set, so that user can set them in cli
+imagerc_filename="${imagerc_filename:-imagerc}"
+docker_build_options="${docker_build_options:-}"
+ops_docker_push="${ops_docker_push:-false}"

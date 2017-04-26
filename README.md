@@ -8,7 +8,7 @@ All the docker-ops functions are available after you install it.
 ### In current shell
 If you want to run releaser in current shell:
 ```bash
-docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.3/docker-ops)"
+docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.2.1/docker-ops)"
 ```
  Do not use it in a script as it would always redownload the file.
 
@@ -17,7 +17,7 @@ docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.3
 If you want to run docker-ops from a script:
 ```bash
 if [[ ! -f ./docker-ops ]];then
-  wget http://archive.ai-traders.com/docker-ops/0.1.3/docker-ops
+  wget --quiet http://archive.ai-traders.com/docker-ops/0.2.1/docker-ops
 fi
 source docker-ops
 ```
@@ -33,7 +33,7 @@ or any other docker-ops function.
 
 ## Usage
 Recommended usage for a project:
-1. Provide `./releaserrc` file to set variables (this is optional). Example:
+1. Provide `./releaserrc` file to set variables or set them in `./tasks` file (this is optional). Example:
 ```
 image_name="docker-registry.ai-traders.com/docker-ops-test"
 image_dir="./image"
@@ -45,11 +45,11 @@ image_dir="./image"
 
 set -e
 if [[ ! -f ./releaser ]];then
-  wget http://http.archive.ai-traders.com/releaser/0.3.1/releaser
+  wget --quiet http://http.archive.ai-traders.com/releaser/0.4.0/releaser
 fi
 source ./releaser
 if [[ ! -f ./docker-ops ]];then
-  wget http://http.archive.ai-traders.com/docker-ops/0.1.3/docker-ops
+  wget --quiet http://http.archive.ai-traders.com/docker-ops/0.2.1/docker-ops
 fi
 source ./docker-ops
 # This must go as last in order to let user variables override default values
@@ -85,5 +85,5 @@ Now you can run:
 The docker-ops functions should be documented in code, there is no sense to repeat it here.
 
 You can set those environment variables:
-  * `dryrun=true` to avoid docker push.
+  * `ops_docker_push=true` to include docker push after building docker image.
   * `RELEASER_LOG_LEVEL=debug` for more log messages.

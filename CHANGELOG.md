@@ -1,3 +1,4 @@
+### 0.2.1 (2017-Apr-26)
 ### 0.2.0 (2017-Apr-25)
 
 * by default do not push docker image on build. Settable with `ops_docker_push`
