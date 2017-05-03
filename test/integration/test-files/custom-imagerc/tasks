@@ -2,7 +2,7 @@
 
 set -e
 if [[ ! -f ./releaser ]];then
-  wget http://http.archive.ai-traders.com/releaser/0.3.2/releaser
+  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.0/releaser
 fi
 source ./releaser
 docker_ops=$(readlink -f ../../../../src/docker-ops)
@@ -18,7 +18,7 @@ case "${command}" in
       ;;
   publish)
       source_imagerc "${image_dir}"  "${imagerc_filename}"
-      production_image_tag="$(get_next_version)"
+      production_image_tag="$(get_next_oversion)"
       docker_push "${AIT_DOCKER_IMAGE_NAME}" "${AIT_DOCKER_IMAGE_TAG}" "${production_image_tag}"
       exit $?
       ;;

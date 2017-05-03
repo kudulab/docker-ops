@@ -63,7 +63,7 @@ case "${command}" in
       ;;
   publish)
       source_imagerc "${image_dir}"  "${imagerc_filename}"
-      production_image_tag="$(get_next_version)"
+      production_image_tag="$(get_next_oversion)"
       docker_push "${AIT_DOCKER_IMAGE_NAME}" "${AIT_DOCKER_IMAGE_TAG}" "${production_image_tag}"
       exit $?
       ;;

@@ -2,7 +2,7 @@
 
 set -e
 if [[ ! -f ./releaser ]];then
-  wget --quiet http://http.archive.ai-traders.com/releaser/0.4.0/releaser
+  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.0/releaser
 fi
 source ./releaser
 releaser_init
@@ -14,7 +14,7 @@ case "${command}" in
       exit $?
       ;;
   verify_version)
-      verify_version_no_version_file
+      verify_version_for_release
       exit $?
       ;;
   itest)
@@ -22,7 +22,7 @@ case "${command}" in
       exit $?
       ;;
   release)
-      verify_version_no_version_file
+      verify_version_for_release
       git_tag_from_oversion
       exit $?
       ;;

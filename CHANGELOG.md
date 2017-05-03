@@ -1,3 +1,7 @@
+### 0.2.2 (2017-May-03)
+
+* \#11010 use releaser 1.0.0 with renamed functions
+
 ### 0.2.1 (2017-Apr-26)
 ### 0.2.0 (2017-Apr-25)
 
