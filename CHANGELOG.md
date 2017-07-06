@@ -1,3 +1,7 @@
+### 0.2.3 (2017-Jul-06)
+
+* improved `source_imagerc` function to make validations
+
 ### 0.2.2 (2017-May-03)
 
 * \#11010 use releaser 1.0.0 with renamed functions

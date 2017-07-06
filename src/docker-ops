@@ -99,6 +99,14 @@ function source_imagerc {
   set -x -e
   source "${image_dir}/${imagerc_filename}"
   set +x +e
+  if [[ -z "AIT_DOCKER_IMAGE_NAME" ]]; then
+    echo "fail! AIT_DOCKER_IMAGE_NAME not set"
+    return 1
+  fi
+  if [[ -z "AIT_DOCKER_IMAGE_TAG" ]]; then
+    echo "fail! AIT_DOCKER_IMAGE_TAG not set"
+    return 1
+  fi
 }
 function docker_push {
   image_name="$1"

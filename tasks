@@ -9,8 +9,15 @@ releaser_init
 
 command="$1"
 case "${command}" in
-  bump)
-      bump_changelog_and_oversion "$2"
+  set_version)
+      if [[ -n "$2" ]]; then
+        next_version="$2"
+        set_version_in_changelog "${changelog_file}" "${next_version}"
+        set_next_oversion "${next_version}"
+      else
+        next_version=$(get_next_oversion)
+        set_version_in_changelog "${changelog_file}" "${next_version}"
+      fi
       exit $?
       ;;
   verify_version)
@@ -24,6 +31,9 @@ case "${command}" in
   release)
       verify_version_for_release
       git_tag_from_oversion
+      old_version=$(get_next_oversion)
+      next_version=$(bump_patch_version "${old_version}")
+      set_next_oversion "${next_version}"
       exit $?
       ;;
   publish)

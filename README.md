@@ -8,7 +8,7 @@ All the docker-ops functions are available after you install it.
 ### In current shell
 If you want to run releaser in current shell:
 ```bash
-docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.2.1/docker-ops)"
+docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.0/docker-ops)"
 ```
  Do not use it in a script as it would always redownload the file.
 
@@ -17,7 +17,7 @@ docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.2.1
 If you want to run docker-ops from a script:
 ```bash
 if [[ ! -f ./docker-ops ]];then
-  wget --quiet http://archive.ai-traders.com/docker-ops/0.2.1/docker-ops
+  wget --quiet http://archive.ai-traders.com/docker-ops/0.1.0/docker-ops
 fi
 source docker-ops
 ```
@@ -49,7 +49,7 @@ if [[ ! -f ./releaser ]];then
 fi
 source ./releaser
 if [[ ! -f ./docker-ops ]];then
-  wget --quiet http://http.archive.ai-traders.com/docker-ops/0.2.1/docker-ops
+  wget --quiet http://http.archive.ai-traders.com/docker-ops/0.1.0/docker-ops
 fi
 source ./docker-ops
 # This must go as last in order to let user variables override default values
@@ -87,3 +87,22 @@ The docker-ops functions should be documented in code, there is no sense to repe
 You can set those environment variables:
   * `ops_docker_push=true` to include docker push after building docker image.
   * `RELEASER_LOG_LEVEL=debug` for more log messages.
+
+## Development
+
+### Lifecycle
+1. In a feature branch:
+ * you make changes
+ * and run tests:
+     * `./tasks itest`
+1. You decide that your changes are ready and you:
+ * merge into master branch
+ * run locally:
+   * `./tasks set_version` to set version in CHANGELOG and chart version files to
+   the version from OVersion backend
+   * e.g. `./tasks set_version 1.2.3` to set version in CHANGELOG and chart version
+    files and in OVersion backend to 1.2.3
+ * push to master onto private git server
+1. CI server (GoCD) tests and releases.
+
+Releaser uses itself, which is treated as true integration test.

@@ -13,9 +13,7 @@ pipelines:
           clean_workspace: true
           jobs:
             verify_version:
-              resources:
-                - docker
-                - small
+              elastic_profile_id: w.c1.m1024.e5
               tasks:
                 - exec:
                     command: /bin/bash
@@ -23,9 +21,7 @@ pipelines:
                       - -c
                       - ./tasks verify_version
             itest:
-              resources:
-                - docker
-                - small
+              elastic_profile_id: w.c1.m1024.e5
               tasks:
                 - exec:
                     command: bash
@@ -36,9 +32,7 @@ pipelines:
           clean_workspace: true
           jobs:
             code:
-              resources:
-                - docker
-                - small
+              elastic_profile_id: w.c1.m1024.e5
               tasks:
                 - exec:
                     command: /bin/bash
@@ -49,9 +43,7 @@ pipelines:
           clean_workspace: true
           jobs:
             code:
-              resources:
-                - docker
-                - small
+              elastic_profile_id: w.c1.m1024.e5
               tasks:
                 - exec:
                     command: /bin/bash
