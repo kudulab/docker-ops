@@ -17,7 +17,7 @@ docker_ops::loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.
 If you want to run docker-ops from a script:
 ```bash
 if [[ ! -f ./docker-ops ]];then
-  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/1.0.6/releaser || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
+  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/0.2.4/docker-ops || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
 fi
 if [[ -f ./docker-ops ]];then
   source ./docker-ops
@@ -42,7 +42,7 @@ Recommended usage for a project:
 
 set -e
 if [[ ! -f ./docker-ops ]];then
-  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/1.0.6/releaser || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
+  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/0.2.4/docker-ops || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
 fi
 if [[ -f ./docker-ops ]];then
   source ./docker-ops
