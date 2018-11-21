@@ -1,3 +1,6 @@
+* fix logging functions' names to be unique even when docker-ops, releaser and
+ other helpers are sourced
+
 ### 0.2.3 (2017-Jul-06)
 
 * improved `source_imagerc` function to make validations

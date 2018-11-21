@@ -17,6 +17,21 @@ function clean_docker_images {
   done
 }
 
+@test "logging works" {
+  run /bin/bash -c "source src/docker-ops && docker_ops::log_info 'dummy message'"
+  assert_output --partial "DOCKER-OPS info: dummy message"
+  assert_equal "$status" 0
+  run /bin/bash -c "source src/docker-ops && docker_ops::log_warn 'dummy message'"
+  assert_output --partial "DOCKER-OPS warn: dummy message"
+  assert_equal "$status" 0
+  run /bin/bash -c "source src/docker-ops && docker_ops::log_error 'dummy message'"
+  assert_output --partial "DOCKER-OPS error: dummy message"
+  assert_equal "$status" 0
+  run /bin/bash -c "source src/docker-ops && RELEASER_LOG_LEVEL=debug docker_ops::log_debug 'dummy message'"
+  assert_output --partial "DOCKER-OPS debug: dummy message"
+  assert_equal "$status" 0
+}
+
 @test "setup - once before all tests" {
   clean_docker_images
 }
