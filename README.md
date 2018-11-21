@@ -6,9 +6,9 @@ Bash scripts to release docker images.
 All the docker-ops functions are available after you install it.
 
 ### In current shell
-If you want to run releaser in current shell:
+If you want to run docker-ops in current shell:
 ```bash
-docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.0/docker-ops)"
+docker_ops::loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.0/docker-ops)"
 ```
  Do not use it in a script as it would always redownload the file.
 
@@ -17,14 +17,16 @@ docker_ops_loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.0
 If you want to run docker-ops from a script:
 ```bash
 if [[ ! -f ./docker-ops ]];then
-  wget --quiet http://archive.ai-traders.com/docker-ops/0.1.0/docker-ops
+  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/1.0.6/releaser || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
 fi
-source docker-ops
+if [[ -f ./docker-ops ]];then
+  source ./docker-ops
+fi
 ```
 
 ### Validate that loaded
 
-To validate that releaser functions are loaded use: `docker_ops_loaded` function
+To validate that releaser functions are loaded use: `docker_ops::loaded` function
 or any other docker-ops function.
 
 ### Dependencies
@@ -33,27 +35,25 @@ or any other docker-ops function.
 
 ## Usage
 Recommended usage for a project:
-1. Provide `./releaserrc` file to set variables or set them in `./tasks` file (this is optional). Example:
-```
-image_name="docker-registry.ai-traders.com/docker-ops-test"
-image_dir="./image"
-```
 1. Provide `./tasks` file with bash `case` (switch). It will allow to run
  a limited amount of commands). Example:
 ```bash
 #!/bin/bash
 
 set -e
-if [[ ! -f ./releaser ]];then
-  wget --quiet http://http.archive.ai-traders.com/releaser/0.4.0/releaser
-fi
-source ./releaser
 if [[ ! -f ./docker-ops ]];then
-  wget --quiet http://http.archive.ai-traders.com/docker-ops/0.1.0/docker-ops
+  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/1.0.6/releaser || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
 fi
-source ./docker-ops
-# This must go as last in order to let user variables override default values
-releaser_init
+if [[ -f ./docker-ops ]];then
+  source ./docker-ops
+fi
+if [[ ! -f ./releaser ]];then
+  timeout 2 wget -O releaser --quiet http://http.archive.ai-traders.com/releaser/1.0.6/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
+fi
+if [[ -f ./releaser ]];then
+  source ./releaser
+  releaser_init
+fi
 
 command="$1"
 case "${command}" in

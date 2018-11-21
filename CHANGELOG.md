@@ -1,3 +1,5 @@
+### 0.2.4 (2018-Nov-21)
+
 * fix logging functions' names to be unique even when docker-ops, releaser and
  other helpers are sourced
 
