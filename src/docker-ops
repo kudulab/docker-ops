@@ -36,26 +36,120 @@ function docker_ops::loaded {
   return 0
 }
 
-function docker_build {
-  image_dir="$1"
-  imagerc_filename="$2"
-  image_name="$3"
-  image_tag="$4"
+# Creates files to be treated as build artifacts. Those files will contain:
+# image name, image tag and the image registry which will be used to push_tmp
+# a docker image. You should use this function once for each image (even if
+# you want to docker push the production image to many docker registries)
+function docker_ops::create_imagerc {
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
+  local image_name=${3?image_name not set}
+  local image_tag=${4?image_tag not set}
+  local image_registry=${5?image_registry not set}
 
-  if [[ -z "${image_dir}" ]];then
-    docker_ops::log_error "image_dir not set"
-    return 1
+  mkdir -p "${image_dir}"
+  echo "export AIT_DOCKER_REGISTRY=\"${image_registry}\"" > "${image_dir}/${imagerc_filename}"
+  echo "export AIT_DOCKER_IMAGE_SHORT_NAME=\"${image_name}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export AIT_DOCKER_IMAGE_NAME=\"${image_registry}/${image_name}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export AIT_DOCKER_IMAGE_URL=\"${image_registry}/${image_name}:${image_tag}\"" >> "${image_dir}/${imagerc_filename}"
+
+  echo "{ " > "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_registry\": \"${image_registry}\"," >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_short_name\": \"${image_name}\"," >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_name\": \"${image_registry}/${image_name}\"," >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_tag\": \"${image_tag}\"," >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_url\": \"${image_registry}/${image_name}:${image_tag}\"" >> "${image_dir}/${imagerc_filename}.json"
+  echo "}" >> "${image_dir}/${imagerc_filename}.json"
+
+  echo "---" > "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_registry: \"${image_registry}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_short_name: \"${image_name}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_name: \"${image_registry}/${image_name}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_tag: \"${image_tag}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_url: \"${image_registry}/${image_name}:${image_tag}\"" >> "${image_dir}/${imagerc_filename}.yml"
+}
+
+function docker_ops::source_imagerc {
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
+  set -eu
+  source "${image_dir}/${imagerc_filename}"
+  echo "Sourced: ${image_dir}/${imagerc_filename}. Image is: ${AIT_DOCKER_REGISTRY}/${AIT_DOCKER_IMAGE_SHORT_NAME}:${AIT_DOCKER_IMAGE_TAG}"
+}
+
+# This function ensures that the temporary image (= not published with a pretty
+# tag to production docker registry) exists locally.
+function docker_ops::ensure_temp_image {
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
+
+  set -e
+  docker_ops::source_imagerc "${image_dir}" "${imagerc_filename}"
+  local temp_image="${AIT_DOCKER_REGISTRY}/${AIT_DOCKER_IMAGE_SHORT_NAME}:${AIT_DOCKER_IMAGE_TAG}"
+  if ! docker inspect -f='{{.Id}}' "${temp_image}" 1>/dev/null 2>&1; then
+      # image does not exist locally, so it must have been already
+      # pushed but under a temporary tag
+      ( set -x; docker pull "${temp_image}"; )
   fi
+}
+
+# Runs a "docker push" on a locally existing, just created, docker image.
+function docker_ops::push_tmp {
+  local image_name=${1?image_name not set}
+  local image_tag=${2?image_tag not set}
+  local image_registry=${3?image_registry not set}
+
+  (set -x; docker tag "${image_name}:${image_tag}" "${image_registry}/${image_name}:${image_tag}"; )
+  if [[ "${ops_docker_push}" != "false" ]]; then
+    (set -x; docker push "${image_registry}/${image_name}:${image_tag}"; )
+  else
+    echo "Not running docker push, because ops_docker_push=${ops_docker_push}"
+  fi
+}
+
+# Runs a "docker push" on an image that was:
+# * either already pushed but under a temporary tag (to a registry specified
+# in imagerc file)
+# * just created and has a temporary tag (no registry set)
+function docker_ops::push_production {
+  local image_name=${1?image_name not set}
+  local image_tag=${2?image_tag not set}
+  local image_registry=${3?image_registry not set}
+  local image_dir=${4?image_dir not set}
+  local imagerc_filename=${5?imagerc_filename not set}
+
+  set -e
+  docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
+  local temp_image="${AIT_DOCKER_REGISTRY}/${AIT_DOCKER_IMAGE_SHORT_NAME}:${AIT_DOCKER_IMAGE_TAG}"
+  # For Docker <=1.8.3, we can use `docker tag -f`.
+  # Otherwise, e.g. Docker 1.12, there is no `-f` option, but `docker tag`
+  # always works as if force was used.
+  set -x
+  docker tag -f "${temp_image}" "${image_registry}/${image_name}:${image_tag}" 2>/dev/null || docker tag "${temp_image}" "${image_registry}/${image_name}:${image_tag}"
+  docker tag -f "${temp_image}" "${image_registry}/${image_name}:latest" 2>/dev/null || docker tag "${temp_image}" "${image_registry}/${image_name}:latest"
+  set +x
+  if [[ "${dryrun}" != "true" ]]; then
+    set -x
+    docker push "${image_registry}/${image_name}:${image_tag}"
+    docker push "${image_registry}/${image_name}:latest"
+    set +x
+  else
+    echo "Not running push, dryrun=${dryrun}"
+  fi
+  set +x
+}
+
+function docker_build {
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
+  # here image_name contains registry, e.g. docker-registry.ai-traders.com/abc:1.2.3
+  local image_name=${3?image_name not set}
+  local image_tag=${4?image_tag not set}
+
+  #docker_ops::log_warn "Running obsolete docker_build function. Please use image_dir set to: ${image_dir}"
   docker_ops::log_info "image_dir set to: ${image_dir}"
-  if [[ -z "${image_name}" ]];then
-    docker_ops::log_error "image_name not set"
-    return 1
-  fi
   docker_ops::log_info "image_name set to: ${image_name}"
-  if [[ -z "${imagerc_filename}" ]];then
-    docker_ops::log_error "imagerc_filename not set"
-    return 1
-  fi
   docker_ops::log_info "imagerc_filename set to: ${imagerc_filename}"
   initial_dir="$(pwd)"
   cd "${image_dir}"
@@ -67,17 +161,8 @@ function docker_build {
 
   set -x -e
   docker build ${docker_build_options} -t "${image_name}:${image_tag}" .
-  echo "export AIT_DOCKER_IMAGE_NAME=\"${image_name}\"" > "${imagerc_filename}"
-  echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${imagerc_filename}"
-
-  echo "{ \"docker_image_name\":\"${image_name}\"," > "${imagerc_filename}.json"
-  echo "\"docker_image_tag\":\"${image_tag}\"," >> "${imagerc_filename}.json"
-  echo "\"docker_image_url\":\"${image_name}:${image_tag}\" }" >> "${imagerc_filename}.json"
-
-  echo "---" > "${imagerc_filename}.yml"
-  echo "docker_image_name: ${image_name}" >> "${imagerc_filename}.yml"
-  echo "docker_image_tag:${image_tag}" >> "${imagerc_filename}.yml"
-  echo "docker_image_url:${image_name}:${image_tag}" >> "${imagerc_filename}.yml"
+  registry="$(echo $image_name | cut -d "/" -f 1)"
+  docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${registry}"
   if [[ "${dryrun}" != "true" && "${ops_docker_push}" != "false" ]];then
     docker push "${image_name}:${image_tag}"
   fi
@@ -85,28 +170,10 @@ function docker_build {
   set +x +e
 }
 function source_imagerc {
-  image_dir="$1"
-  imagerc_filename="$2"
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
 
-  if [[ -z "${image_dir}" ]];then
-    docker_ops::log_error "image_dir not set"
-    return 1
-  fi
-  if [[ -z "${imagerc_filename}" ]];then
-    docker_ops::log_error "imagerc_filename not set"
-    return 1
-  fi
-  set -x -e
-  source "${image_dir}/${imagerc_filename}"
-  set +x +e
-  if [[ -z "AIT_DOCKER_IMAGE_NAME" ]]; then
-    echo "fail! AIT_DOCKER_IMAGE_NAME not set"
-    return 1
-  fi
-  if [[ -z "AIT_DOCKER_IMAGE_TAG" ]]; then
-    echo "fail! AIT_DOCKER_IMAGE_TAG not set"
-    return 1
-  fi
+  docker_ops::source_imagerc "${image_dir}" "${imagerc_filename}"
 }
 function docker_push {
   image_name="$1"

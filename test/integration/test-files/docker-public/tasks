@@ -1,0 +1,91 @@
+#!/bin/bash
+
+set -e
+if [[ ! -f ./releaser ]]; then
+  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring."; }
+fi
+if [[ -f ./releaser ]]; then
+  source ./releaser
+fi
+docker_ops=$(readlink -f ../../../../src/docker-ops)
+source ${docker_ops}
+if [[ -f ./releaser ]]; then
+  # This goes as last in order to let end user variables override default values
+  releaser_init
+fi
+
+image_dir="./image"
+imagerc_filename="imagerc"
+image_registry="docker-registry.ai-traders.com"
+image_name="docker-ops-public"
+public_registry="ai-traders"
+
+set -u
+command="$1"
+case "${command}" in
+  build_public)
+      image_tag="${2:-temp}"
+      # run in a subshell to change current directory temporarily
+      ( set -x; cd "${image_dir}"; docker build -t "${image_name}:${image_tag}" .; )
+      exit $?
+      ;;
+  test_public)
+      # this defaults to a local image, without registry set, but
+      # let's make it settable, so that we can test an image from docker hub,
+      # without building it locally
+      AIT_DOCKER_IMAGE_URL="${2:-${image_name}:temp}"
+      export AIT_DOCKER_IMAGE_URL
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      time bats --pretty "$(pwd)/test/integration/bats"
+      ;;
+  example_public)
+      AIT_DOCKER_IMAGE_URL="${2:-${image_name}:temp}"
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
+      ;;
+  set_version)
+      if [[ -n "$2" ]]; then
+        next_version="$2"
+      else
+        version=$(get_last_version_from_changelog "${changelog_file}")
+        next_version=$(bump_patch_version "${version}")
+      fi
+      set_version_in_changelog "${changelog_file}" "${next_version}"
+      exit $?
+      ;;
+  verify_version)
+      verify_changelog_version
+      exit $?
+      ;;
+  build)
+      # AI-Traders private opinionated way of building a docker image.
+      # latest git commit hash
+      image_tag=$(git rev-parse HEAD)
+      ./tasks build_public "${image_tag}"
+      docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${image_registry}"
+      docker_ops::push_tmp "${image_name}" "${image_tag}" "${image_registry}"
+      ;;
+  test)
+      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
+      ./tasks test_public "${AIT_DOCKER_IMAGE_URL}"
+      ;;
+  example)
+      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
+      ./tasks example_public "${AIT_DOCKER_IMAGE_URL}"
+      ;;
+  release)
+      ./tasks verify_version
+      version=$(get_last_version_from_changelog "${changelog_file}")
+      git tag "${version}" && git push origin "${version}"
+      ;;
+  publish)
+      version=$(get_last_version_from_changelog "${changelog_file}")
+      docker_ops::push_production "${image_name}" "${version}" "${image_registry}" "${image_dir}"  "${imagerc_filename}"
+      exit $?
+      ;;
+  *)
+      echo "Invalid command: '${command}'"
+      exit 1
+      ;;
+esac
+set +e

@@ -1,0 +1,93 @@
+#!/bin/bash
+
+set -e
+if [[ ! -f ./releaser ]]; then
+  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring."; }
+fi
+if [[ -f ./releaser ]]; then
+  source ./releaser
+fi
+docker_ops=$(readlink -f ../../../../src/docker-ops)
+source ${docker_ops}
+if [[ -f ./releaser ]]; then
+  # This goes as last in order to let end user variables override default values
+  releaser_init
+fi
+
+image_dir1="./image1"
+imagerc_filename1="imagerc1"
+image_registry1="docker-registry1.ai-traders.com"
+image_name1="docker-ops-private1"
+
+image_dir2="./image2"
+imagerc_filename2="imagerc2"
+image_registry2="docker-registry2.ai-traders.com"
+image_name2="docker-ops-private2"
+
+set -u
+command="$1"
+case "${command}" in
+  build)
+      image_tag=$(git rev-parse HEAD)
+
+      # build image1 and push to a test registry1
+      ( set -x; cd "${image_dir1}"; docker build -t "${image_name1}:${image_tag}" .; )
+      docker_ops::create_imagerc "${image_dir1}" "${imagerc_filename1}" "${image_name1}" "${image_tag}" "${image_registry1}"
+      docker_ops::push_tmp "${image_name1}" "${image_tag}" "${image_registry1}"
+
+      # build image2 and push to a test registry1
+      ( set -x; cd "${image_dir2}"; docker build -t "${image_name2}:${image_tag}" .; )
+      docker_ops::create_imagerc "${image_dir2}" "${imagerc_filename2}" "${image_name2}" "${image_tag}" "${image_registry1}"
+      docker_ops::push_tmp "${image_name2}" "${image_tag}" "${image_registry1}"
+      ;;
+  test)
+      docker_ops::ensure_temp_image "${image_dir1}" "${imagerc_filename1}"
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      time bats --pretty "$(pwd)/test/integration/bats1"
+
+      docker_ops::ensure_temp_image "${image_dir2}" "${imagerc_filename2}"
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      time bats --pretty "$(pwd)/test/integration/bats2"
+      ;;
+  example)
+      docker_ops::ensure_temp_image "${image_dir1}" "${imagerc_filename1}"
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
+
+      docker_ops::ensure_temp_image "${image_dir2}" "${imagerc_filename2}"
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
+      ;;
+  set_version)
+      if [[ -n "$2" ]]; then
+        next_version="$2"
+      else
+        version=$(get_last_version_from_changelog "${changelog_file}")
+        next_version=$(bump_patch_version "${version}")
+      fi
+      set_version_in_changelog "${changelog_file}" "${next_version}"
+      exit $?
+      ;;
+  verify_version)
+      verify_changelog_version
+      exit $?
+      ;;
+  release)
+      ./tasks verify_version
+      version=$(get_last_version_from_changelog "${changelog_file}")
+      git tag "${version}" && git push origin "${version}"
+      ;;
+  publish)
+      version=$(get_last_version_from_changelog "${changelog_file}")
+      # push production image1 to image_registry1
+      docker_ops::push_production "${image_name1}" "${version}" "${image_registry1}" "${image_dir1}"  "${imagerc_filename1}"
+      # push production image2 to image_registry2
+      docker_ops::push_production "${image_name2}" "${version}" "${image_registry2}" "${image_dir2}"  "${imagerc_filename2}"
+      exit $?
+      ;;
+  *)
+      echo "Invalid command: '${command}'"
+      exit 1
+      ;;
+esac
+set +e

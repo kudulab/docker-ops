@@ -1,3 +1,7 @@
+* add new functions which names start with `docker_ops::`
+* make it easy (add example) to use docker-ops with public images #17129
+* no more oversion in docker images
+
 ### 0.2.4 (2018-Nov-21)
 
 * fix logging functions' names to be unique even when docker-ops, releaser and

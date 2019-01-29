@@ -1,4 +1,0 @@
----
-backend: 'consul'
-project_name: 'docker-releaser-test'
-consul_url: 'http://consul.service.mosk.consul.ai-traders.com:8500'

@@ -1,3 +1,0 @@
-image_name="docker-registry.ai-traders.com/docker-ops-test-custom-imagerc"
-image_dir="./image"
-imagerc_filename="myimagerc"
