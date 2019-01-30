@@ -52,11 +52,11 @@ case "${command}" in
   example)
       docker_ops::ensure_temp_image "${image_dir1}" "${imagerc_filename1}"
       echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
-      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
+      docker run --rm ${AIT_DOCKER_IMAGE_URL}
 
       docker_ops::ensure_temp_image "${image_dir2}" "${imagerc_filename2}"
       echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
-      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
+      docker run --rm ${AIT_DOCKER_IMAGE_URL}
       ;;
   set_version)
       if [[ -n "$2" ]]; then

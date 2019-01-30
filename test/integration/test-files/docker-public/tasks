@@ -41,7 +41,7 @@ case "${command}" in
   example_public)
       AIT_DOCKER_IMAGE_URL="${2:-${image_name}:temp}"
       echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
-      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
+      docker run --rm ${AIT_DOCKER_IMAGE_URL}
       ;;
   set_version)
       if [[ -n "$2" ]]; then
