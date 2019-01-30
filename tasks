@@ -2,10 +2,12 @@
 
 set -e
 if [[ ! -f ./releaser ]];then
-  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.0/releaser
+  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.8/releaser
 fi
-source ./releaser
-releaser_init
+if [[ -f ./releaser ]];then
+  source ./releaser
+  releaser_init
+fi
 
 command="$1"
 case "${command}" in

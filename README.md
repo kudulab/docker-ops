@@ -42,29 +42,47 @@ Recommended usage for a project:
 
 set -e
 if [[ ! -f ./docker-ops ]];then
-  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/0.2.4/docker-ops || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
+  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/0.3.0/docker-ops || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
 fi
 if [[ -f ./docker-ops ]];then
   source ./docker-ops
 fi
 if [[ ! -f ./releaser ]];then
-  timeout 2 wget -O releaser --quiet http://http.archive.ai-traders.com/releaser/1.0.6/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
+  timeout 2 wget -O releaser --quiet http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
 fi
 if [[ -f ./releaser ]];then
   source ./releaser
   releaser_init
 fi
 
+image_dir="image"
+imagerc_filename="imagerc"
+image_registry="docker-registry.ai-traders.com"
+image_name="myimg"
+
 command="$1"
 case "${command}" in
   build)
-      docker_build "${image_dir}" "${imagerc_filename}" "${image_name}" "$2"
-      exit $?
+      image_tag=$(git rev-parse HEAD)
+      # build image1 and push to a test registry1
+      ( set -x; cd "${image_dir1}"; docker build -t "${image_name}:${image_tag}" .; )
+      docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${image_registry}"
+      docker_ops::push_tmp "${image_name}" "${image_tag}" "${image_registry}"
+      ;;
+  test)
+      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      time bats --pretty "$(pwd)/test/integration/bats"
+      ;;
+  example)
+      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
+      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
       ;;
   publish)
-      source_imagerc "${image_dir}"  "${imagerc_filename}"
-      production_image_tag="$(get_next_oversion)"
-      docker_push "${AIT_DOCKER_IMAGE_NAME}" "${AIT_DOCKER_IMAGE_TAG}" "${production_image_tag}"
+      version=$(get_last_version_from_changelog "${changelog_file}")
+      # push production image1 to image_registry1
+      docker_ops::push_production "${image_name}" "${version}" "${image_registry}" "${image_dir}"  "${imagerc_filename}"
       exit $?
       ;;
   *)
@@ -78,6 +96,8 @@ set +e
 Now you can run:
 ```bash
 ./tasks build
+./tasks test
+./tasks example
 ./tasks publish
 ```
 

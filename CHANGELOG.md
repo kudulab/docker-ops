@@ -1,3 +1,5 @@
+### 0.3.0 (2019-Jan-30)
+
 * add new functions which names start with `docker_ops::`
 * make it easy (add example) to use docker-ops with public images #17129
 * no more oversion in docker images
