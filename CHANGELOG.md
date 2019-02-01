@@ -1,3 +1,5 @@
+### 0.3.1 (2019-Feb-01)
+
 * make functions docker_ops::push_production and docker_ops::create_imagerc
  take arguments in the same order
 
