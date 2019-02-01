@@ -80,7 +80,7 @@ case "${command}" in
       ;;
   publish)
       version=$(get_last_version_from_changelog "${changelog_file}")
-      docker_ops::push_production "${image_name}" "${version}" "${image_registry}" "${image_dir}"  "${imagerc_filename}"
+      docker_ops::push_production "${image_dir}"  "${imagerc_filename}" "${image_name}" "${version}" "${image_registry}"
       exit $?
       ;;
   *)

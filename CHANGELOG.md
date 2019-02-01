@@ -1,3 +1,6 @@
+* make functions docker_ops::push_production and docker_ops::create_imagerc
+ take arguments in the same order
+
 ### 0.3.0 (2019-Jan-30)
 
 * add new functions which names start with `docker_ops::`

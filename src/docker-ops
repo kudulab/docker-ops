@@ -113,11 +113,11 @@ function docker_ops::push_tmp {
 # in imagerc file)
 # * just created and has a temporary tag (no registry set)
 function docker_ops::push_production {
-  local image_name=${1?image_name not set}
-  local image_tag=${2?image_tag not set}
-  local image_registry=${3?image_registry not set}
-  local image_dir=${4?image_dir not set}
-  local imagerc_filename=${5?imagerc_filename not set}
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
+  local image_name=${3?image_name not set}
+  local image_tag=${4?image_tag not set}
+  local image_registry=${5?image_registry not set}
 
   set -e
   docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"

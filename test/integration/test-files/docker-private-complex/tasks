@@ -80,9 +80,9 @@ case "${command}" in
   publish)
       version=$(get_last_version_from_changelog "${changelog_file}")
       # push production image1 to image_registry1
-      docker_ops::push_production "${image_name1}" "${version}" "${image_registry1}" "${image_dir1}"  "${imagerc_filename1}"
+      docker_ops::push_production "${image_dir1}"  "${imagerc_filename1}" "${image_name1}" "${version}" "${image_registry1}"
       # push production image2 to image_registry2
-      docker_ops::push_production "${image_name2}" "${version}" "${image_registry2}" "${image_dir2}"  "${imagerc_filename2}"
+      docker_ops::push_production "${image_dir2}"  "${imagerc_filename2}" "${image_name2}" "${version}" "${image_registry2}"
       exit $?
       ;;
   *)
