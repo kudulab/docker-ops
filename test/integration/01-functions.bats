@@ -34,14 +34,14 @@ load '/opt/bats-assert/load.bash'
   rm -f /tmp/docker-ops-test/imagerc*
   run /bin/bash -c "source src/docker-ops && docker_ops::create_imagerc /tmp/docker-ops-test imagerc myimg mytag"
   assert_output --partial "registry not set"
-  assert_equal "$status" 127
+  assert_equal "$status" 1
 }
 @test "docker_ops::create_imagerc - fails if an argument set to empty string" {
   rm -f /tmp/docker-ops-test/imagerc*
   registry=""
   run /bin/bash -c "source src/docker-ops && docker_ops::create_imagerc /tmp/docker-ops-test imagerc myimg mytag ${registry}"
   assert_output --partial "registry not set"
-  assert_equal "$status" 127
+  assert_equal "$status" 1
 }
 @test "docker_ops::create_imagerc - clean" {
   rm -f /tmp/docker-ops-test/imagerc*
@@ -49,7 +49,7 @@ load '/opt/bats-assert/load.bash'
 @test "docker_ops::source_imagerc - fails if an argument not set" {
   run /bin/bash -c "source src/docker-ops && docker_ops::source_imagerc"
   assert_output --partial "image_dir not set"
-  assert_equal "$status" 127
+  assert_equal "$status" 1
 }
 @test "docker_ops::source_imagerc" {
   echo "export AIT_DOCKER_REGISTRY=\"reg1\"" > imagerc-test
@@ -65,7 +65,7 @@ load '/opt/bats-assert/load.bash'
 @test "source_imagerc - fails if an argument not set" {
   run /bin/bash -c "source src/docker-ops && source_imagerc"
   assert_output --partial "image_dir not set"
-  assert_equal "$status" 127
+  assert_equal "$status" 1
 }
 @test "source_imagerc" {
   echo "export AIT_DOCKER_REGISTRY=\"reg1\"" > imagerc-test

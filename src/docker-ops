@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 ################################################################################
 # Generally:
 # * Each log output goes to stderrr, so that we can return value from functions
@@ -220,3 +222,5 @@ function docker_push {
 imagerc_filename="${imagerc_filename:-imagerc}"
 docker_build_options="${docker_build_options:-}"
 ops_docker_push="${ops_docker_push:-false}"
+dryrun="${dryrun:-false}"
+RELEASER_LOG_LEVEL="${RELEASER_LOG_LEVEL:-info}"

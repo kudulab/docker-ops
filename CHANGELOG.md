@@ -1,3 +1,8 @@
+### 0.3.2 (2019-Feb-02)
+
+* safer bash options: `set -Eeuo pipefail`
+* set default value to dryrun to allow running with `set -u`
+
 ### 0.3.1 (2019-Feb-01)
 
 * make functions docker_ops::push_production and docker_ops::create_imagerc
