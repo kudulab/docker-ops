@@ -1,3 +1,7 @@
+### 0.3.3 (2019-Feb-02)
+
+* use releaser 1.1.0
+
 ### 0.3.2 (2019-Feb-02)
 
 * safer bash options: `set -Eeuo pipefail`

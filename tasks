@@ -2,11 +2,10 @@
 
 set -e
 if [[ ! -f ./releaser ]];then
-  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.8/releaser
+  wget --quiet http://http.archive.ai-traders.com/releaser/1.1.0/releaser
 fi
 if [[ -f ./releaser ]];then
   source ./releaser
-  releaser_init
 fi
 
 command="$1"
@@ -14,16 +13,16 @@ case "${command}" in
   set_version)
       if [[ -n "$2" ]]; then
         next_version="$2"
-        set_version_in_changelog "${changelog_file}" "${next_version}"
-        set_next_oversion "${next_version}"
+        releaser::set_version_in_changelog "${changelog_file}" "${next_version}"
+        releaser::set_next_oversion "${next_version}"
       else
-        next_version=$(get_next_oversion)
-        set_version_in_changelog "${changelog_file}" "${next_version}"
+        next_version=$(releaser::get_next_oversion)
+        releaser::set_version_in_changelog "${changelog_file}" "${next_version}"
       fi
       exit $?
       ;;
   verify_version)
-      verify_version_for_release
+      releaser::verify_version_for_release
       exit $?
       ;;
   itest)
@@ -31,17 +30,17 @@ case "${command}" in
       exit $?
       ;;
   release)
-      verify_version_for_release
-      git_tag_from_oversion
-      old_version=$(get_next_oversion)
-      next_version=$(bump_patch_version "${old_version}")
-      set_next_oversion "${next_version}"
+      releaser::verify_version_for_release
+      releaser::git_tag_from_oversion
+      old_version=$(releaser::get_next_oversion)
+      next_version=$(releaser::bump_patch_version "${old_version}")
+      releaser::set_next_oversion "${next_version}"
       exit $?
       ;;
   publish)
       # publish the just released version
-      version=$(get_last_git_tagged_version)
-      publish_to_archive "docker-ops" "${version}" "src/docker-ops"
+      version=$(releaser::get_last_git_tagged_version)
+      releaser::publish_to_archive "docker-ops" "${version}" "src/docker-ops"
       exit $?
       ;;
   *)

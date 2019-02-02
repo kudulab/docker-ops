@@ -2,17 +2,13 @@
 
 set -e
 if [[ ! -f ./releaser ]]; then
-  wget --quiet http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring."; }
+  wget --quiet http://http.archive.ai-traders.com/releaser/1.1.0/releaser || { echo "Cannot download releaser, ignoring."; }
 fi
 if [[ -f ./releaser ]]; then
   source ./releaser
 fi
 docker_ops=$(readlink -f ../../../../src/docker-ops)
 source ${docker_ops}
-if [[ -f ./releaser ]]; then
-  # This goes as last in order to let end user variables override default values
-  releaser_init
-fi
 
 image_dir1="./image1"
 imagerc_filename1="imagerc1"
@@ -62,23 +58,23 @@ case "${command}" in
       if [[ -n "$2" ]]; then
         next_version="$2"
       else
-        version=$(get_last_version_from_changelog "${changelog_file}")
-        next_version=$(bump_patch_version "${version}")
+        version=$(releaser::get_last_version_from_whole_changelog "${changelog_file}")
+        next_version=$(releaser::bump_patch_version "${version}")
       fi
-      set_version_in_changelog "${changelog_file}" "${next_version}"
+      releaser::set_version_in_changelog "${changelog_file}" "${next_version}"
       exit $?
       ;;
   verify_version)
-      verify_changelog_version
+      releaser::verify_changelog_version
       exit $?
       ;;
   release)
       ./tasks verify_version
-      version=$(get_last_version_from_changelog "${changelog_file}")
+      version=$(releaser::get_last_version_from_whole_changelog "${changelog_file}")
       git tag "${version}" && git push origin "${version}"
       ;;
   publish)
-      version=$(get_last_version_from_changelog "${changelog_file}")
+      version=$(releaser::get_last_version_from_whole_changelog "${changelog_file}")
       # push production image1 to image_registry1
       docker_ops::push_production "${image_dir1}"  "${imagerc_filename1}" "${image_name1}" "${version}" "${image_registry1}"
       # push production image2 to image_registry2
