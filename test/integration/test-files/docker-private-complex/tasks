@@ -1,12 +1,15 @@
 #!/bin/bash
 
 set -e
-if [[ ! -f ./releaser ]]; then
-  wget --quiet http://http.archive.ai-traders.com/releaser/1.1.0/releaser || { echo "Cannot download releaser, ignoring."; }
+RELEASER_VERSION="2.0.0"
+RELEASER_FILE=".ops/releaser-${RELEASER_VERSION}"
+
+mkdir -p .ops
+if [[ ! -f $RELEASER_FILE ]];then
+  wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/2.0.0/releaser
 fi
-if [[ -f ./releaser ]]; then
-  source ./releaser
-fi
+source $RELEASER_FILE
+
 docker_ops=$(readlink -f ../../../../src/docker-ops)
 source ${docker_ops}
 
@@ -27,32 +30,30 @@ case "${command}" in
       image_tag=$(git rev-parse HEAD)
 
       # build image1 and push to a test registry1
-      ( set -x; cd "${image_dir1}"; docker build -t "${image_name1}:${image_tag}" .; )
-      docker_ops::create_imagerc "${image_dir1}" "${imagerc_filename1}" "${image_name1}" "${image_tag}" "${image_registry1}"
-      docker_ops::push_tmp "${image_name1}" "${image_tag}" "${image_registry1}"
+      docker_ops::docker_build "${image_dir1}" "${imagerc_filename1}" "${image_name1}" "${image_tag}" "${image_registry1}"
+      docker_ops::push "${image_dir1}" "${imagerc_filename1}"
 
       # build image2 and push to a test registry1
-      ( set -x; cd "${image_dir2}"; docker build -t "${image_name2}:${image_tag}" .; )
-      docker_ops::create_imagerc "${image_dir2}" "${imagerc_filename2}" "${image_name2}" "${image_tag}" "${image_registry1}"
-      docker_ops::push_tmp "${image_name2}" "${image_tag}" "${image_registry1}"
+      docker_ops::docker_build "${image_dir2}" "${imagerc_filename2}" "${image_name2}" "${image_tag}" "${image_registry1}"
+      docker_ops::push "${image_dir2}" "${imagerc_filename2}"
       ;;
   test)
-      docker_ops::ensure_temp_image "${image_dir1}" "${imagerc_filename1}"
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      docker_ops::ensure_pulled_image "${image_dir1}" "${imagerc_filename1}"
+      echo "Testing image: ${KUDU_DOCKER_IMAGE_URL}"
       time bats --pretty "$(pwd)/test/integration/bats1"
 
-      docker_ops::ensure_temp_image "${image_dir2}" "${imagerc_filename2}"
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      docker_ops::ensure_pulled_image "${image_dir2}" "${imagerc_filename2}"
+      echo "Testing image: ${KUDU_DOCKER_IMAGE_URL}"
       time bats --pretty "$(pwd)/test/integration/bats2"
       ;;
   example)
-      docker_ops::ensure_temp_image "${image_dir1}" "${imagerc_filename1}"
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
-      docker run --rm ${AIT_DOCKER_IMAGE_URL}
+      docker_ops::ensure_pulled_image "${image_dir1}" "${imagerc_filename1}"
+      echo "Testing image: ${KUDU_DOCKER_IMAGE_URL}"
+      docker run --rm ${KUDU_DOCKER_IMAGE_URL}
 
-      docker_ops::ensure_temp_image "${image_dir2}" "${imagerc_filename2}"
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
-      docker run --rm ${AIT_DOCKER_IMAGE_URL}
+      docker_ops::ensure_pulled_image "${image_dir2}" "${imagerc_filename2}"
+      echo "Testing image: ${KUDU_DOCKER_IMAGE_URL}"
+      docker run --rm ${KUDU_DOCKER_IMAGE_URL}
       ;;
   set_version)
       if [[ -n "$2" ]]; then
@@ -76,9 +77,9 @@ case "${command}" in
   publish)
       version=$(releaser::get_last_version_from_whole_changelog "${changelog_file}")
       # push production image1 to image_registry1
-      docker_ops::push_production "${image_dir1}"  "${imagerc_filename1}" "${image_name1}" "${version}" "${image_registry1}"
+      docker_ops::retag_push "${image_dir1}"  "${imagerc_filename1}" "${image_name1}" "${version}" "${image_registry1}"
       # push production image2 to image_registry2
-      docker_ops::push_production "${image_dir2}"  "${imagerc_filename2}" "${image_name2}" "${version}" "${image_registry2}"
+      docker_ops::retag_push "${image_dir2}"  "${imagerc_filename2}" "${image_name2}" "${version}" "${image_registry2}"
       exit $?
       ;;
   *)

@@ -1,12 +1,15 @@
 #!/bin/bash
-
 set -e
-if [[ ! -f ./releaser ]]; then
-  wget --quiet http://http.archive.ai-traders.com/releaser/1.1.0/releaser || { echo "Cannot download releaser, ignoring."; }
+
+RELEASER_VERSION="2.0.0"
+RELEASER_FILE=".ops/releaser-${RELEASER_VERSION}"
+
+mkdir -p .ops
+if [[ ! -f $RELEASER_FILE ]];then
+  wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/2.0.0/releaser
 fi
-if [[ -f ./releaser ]]; then
-  source ./releaser
-fi
+source $RELEASER_FILE
+
 docker_ops=$(readlink -f ../../../../src/docker-ops)
 source ${docker_ops}
 if [[ -f ./releaser ]]; then
@@ -16,32 +19,30 @@ fi
 
 image_dir="./image"
 imagerc_filename="imagerc"
-image_registry="docker-registry.ai-traders.com"
+image_registry="dockerhub"
 image_name="docker-ops-public"
-public_registry="ai-traders"
 
 set -u
 command="$1"
 case "${command}" in
   build_public)
       image_tag="${2:-temp}"
-      # run in a subshell to change current directory temporarily
-      ( set -x; cd "${image_dir}"; docker build -t "${image_name}:${image_tag}" .; )
+      docker_ops::docker_build "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}"
       exit $?
       ;;
   test_public)
       # this defaults to a local image, without registry set, but
       # let's make it settable, so that we can test an image from docker hub,
       # without building it locally
-      AIT_DOCKER_IMAGE_URL="${2:-${image_name}:temp}"
-      export AIT_DOCKER_IMAGE_URL
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      KUDU_DOCKER_IMAGE_URL="${2:-${image_name}:temp}"
+      export KUDU_DOCKER_IMAGE_URL
+      echo "Testing image: ${KUDU_DOCKER_IMAGE_URL}"
       time bats --pretty "$(pwd)/test/integration/bats"
       ;;
   example_public)
-      AIT_DOCKER_IMAGE_URL="${2:-${image_name}:temp}"
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
-      docker run --rm ${AIT_DOCKER_IMAGE_URL}
+      KUDU_DOCKER_IMAGE_URL="${2:-${image_name}:temp}"
+      echo "Testing image: ${KUDU_DOCKER_IMAGE_URL}"
+      docker run --rm ${KUDU_DOCKER_IMAGE_URL}
       ;;
   set_version)
       if [[ -n "$2" ]]; then
@@ -62,16 +63,14 @@ case "${command}" in
       # latest git commit hash
       image_tag=$(git rev-parse HEAD)
       ./tasks build_public "${image_tag}"
-      docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${image_registry}"
-      docker_ops::push_tmp "${image_name}" "${image_tag}" "${image_registry}"
       ;;
   test)
-      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
-      ./tasks test_public "${AIT_DOCKER_IMAGE_URL}"
+      docker_ops::ensure_pulled_image "${image_dir}" "${imagerc_filename}"
+      ./tasks test_public "${KUDU_DOCKER_IMAGE_URL}"
       ;;
   example)
-      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
-      ./tasks example_public "${AIT_DOCKER_IMAGE_URL}"
+      docker_ops::ensure_pulled_image "${image_dir}" "${imagerc_filename}"
+      ./tasks example_public "${KUDU_DOCKER_IMAGE_URL}"
       ;;
   release)
       ./tasks verify_version
@@ -80,7 +79,7 @@ case "${command}" in
       ;;
   publish)
       version=$(releaser::get_last_version_from_whole_changelog "${changelog_file}")
-      docker_ops::push_production "${image_dir}"  "${imagerc_filename}" "${image_name}" "${version}" "${image_registry}"
+      docker_ops::retag_push "${image_dir}"  "${imagerc_filename}" "${image_name}" "${version}" "${image_registry}"
       exit $?
       ;;
   *)

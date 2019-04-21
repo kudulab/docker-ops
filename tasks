@@ -1,47 +1,48 @@
 #!/bin/bash
 
 set -e
-if [[ ! -f ./releaser ]];then
-  wget --quiet http://http.archive.ai-traders.com/releaser/1.1.0/releaser
+
+RELEASER_VERSION="2.0.0"
+RELEASER_FILE=".ops/releaser-${RELEASER_VERSION}"
+
+mkdir -p .ops
+if [[ ! -f $RELEASER_FILE ]];then
+  wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/2.0.0/releaser
 fi
-if [[ -f ./releaser ]];then
-  source ./releaser
-fi
+source $RELEASER_FILE
 
 command="$1"
 case "${command}" in
   set_version)
-      if [[ -n "$2" ]]; then
-        next_version="$2"
-        releaser::set_version_in_changelog "${changelog_file}" "${next_version}"
-        releaser::set_next_oversion "${next_version}"
-      else
-        next_version=$(releaser::get_next_oversion)
-        releaser::set_version_in_changelog "${changelog_file}" "${next_version}"
-      fi
-      exit $?
+      releaser::bump_changelog_version "$2" "$3"
       ;;
   verify_version)
       releaser::verify_version_for_release
-      exit $?
       ;;
   itest)
       time bats ./test/integration/*.bats
-      exit $?
       ;;
   release)
       releaser::verify_version_for_release
-      releaser::git_tag_from_oversion
-      old_version=$(releaser::get_next_oversion)
-      next_version=$(releaser::bump_patch_version "${old_version}")
-      releaser::set_next_oversion "${next_version}"
-      exit $?
+      releaser::git_tag_from_changelog
       ;;
   publish)
       # publish the just released version
-      version=$(releaser::get_last_git_tagged_version)
-      releaser::publish_to_archive "docker-ops" "${version}" "src/docker-ops"
-      exit $?
+      VERSION=$(releaser::get_last_git_tagged_version)
+      releaser::prepare_github_release_bin
+      $GHRELEASE_BIN release \
+        --user kudulab \
+        --repo docker-ops \
+        --tag $VERSION \
+        --name $VERSION \
+        --pre-release
+
+      $GHRELEASE_BIN upload \
+        --user kudulab \
+        --repo docker-ops \
+        --tag $VERSION \
+        --name "docker-ops" \
+        --file src/docker-ops
       ;;
   *)
       echo "Invalid command: '${command}'"

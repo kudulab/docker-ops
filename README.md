@@ -35,55 +35,47 @@ or any other docker-ops function.
 
 ## Usage
 Recommended usage for a project:
-1. Provide `./tasks` file with bash `case` (switch). It will allow to run
- a limited amount of commands). Example:
+Provide `./tasks` file with bash `case` (switch). It will allow to run
+ a limited amount of commands).
+
+At the top of file download supporting docker-ops script:
 ```bash
 #!/bin/bash
-
 set -e
-if [[ ! -f ./docker-ops ]];then
-  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/0.3.0/docker-ops || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
-fi
-if [[ -f ./docker-ops ]];then
-  source ./docker-ops
-fi
-if [[ ! -f ./releaser ]];then
-  timeout 2 wget -O releaser --quiet http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
-fi
-if [[ -f ./releaser ]];then
-  source ./releaser
-  releaser_init
-fi
 
+DOCKER_OPS_VERSION="2.0.0"
+DOCKER_OPS_FILE=".ops/releaser-${DOCKER_OPS_VERSION}"
+
+mkdir -p .ops
+if [[ ! -f $DOCKER_OPS_FILE ]];then
+  wget --quiet -O $DOCKER_OPS_FILE https://github.com/kudulab/docker-ops/releases/download/${DOCKER_OPS_VERSION}/docker-ops
+fi
+source $DOCKER_OPS_FILE
+```
+
+Define basic information
+
+```
 image_dir="image"
 imagerc_filename="imagerc"
-image_registry="docker-registry.ai-traders.com"
+image_registry="docker-registry.example.com"
 image_name="myimg"
+```
 
+Tasks for building and testing the image could look like this:
+```bash
 command="$1"
 case "${command}" in
   build)
       image_tag=$(git rev-parse HEAD)
-      # build image1 and push to a test registry1
-      ( set -x; cd "${image_dir1}"; docker build -t "${image_name}:${image_tag}" .; )
-      docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${image_registry}"
-      docker_ops::push_tmp "${image_name}" "${image_tag}" "${image_registry}"
+      # build image and push to a test registry
+      docker_ops::docker_build "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${image_registry}"
+      docker_ops::push "${image_dir}" "${imagerc_filename}"
       ;;
   test)
-      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
+      docker_ops::ensure_pulled_image "${image_dir}" "${imagerc_filename}"
+      echo "Testing image: ${KUDU_DOCKER_IMAGE_URL}"
       time bats --pretty "$(pwd)/test/integration/bats"
-      ;;
-  example)
-      docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
-      echo "Testing image: ${AIT_DOCKER_IMAGE_URL}"
-      docker run -ti --rm ${AIT_DOCKER_IMAGE_URL}
-      ;;
-  publish)
-      version=$(get_last_version_from_changelog "${changelog_file}")
-      # push production image1 to image_registry1
-      docker_ops::push_production "${image_name}" "${version}" "${image_registry}" "${image_dir}"  "${imagerc_filename}"
-      exit $?
       ;;
   *)
       echo "Invalid command: '${command}'"
@@ -93,20 +85,28 @@ esac
 set +e
 ```
 
-Now you can run:
-```bash
-./tasks build
-./tasks test
-./tasks example
-./tasks publish
-```
 
 ### Docker-ops functions
 The docker-ops functions should be documented in code, there is no sense to repeat it here.
 
-You can set those environment variables:
-  * `ops_docker_push=true` to include docker push after building docker image.
-  * `RELEASER_LOG_LEVEL=debug` for more log messages.
+You can set these environment variables:
+  * `DOCKER_OPS_LOG_LEVEL=debug` for more log messages.
+
+#### Image URLs
+
+There are 2 useful functions to create image references.
+```sh
+image_name="$(docker_ops::make_image_name $image_short_name $image_registry)"
+```
+Creates image name with registry but no tag.
+
+
+```sh
+image_url="$(docker_ops::make_image_url $image_short_name $image_tag $image_registry)"
+```
+Creates full url to the image - registry, name and tag.
+
+When `image_registry=dockerhub` then image name prefix with registry is skipped.
 
 ## Development
 

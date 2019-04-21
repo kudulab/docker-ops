@@ -5,6 +5,7 @@ repo_dir="test/integration/test-files/docker-private-complex"
 repo_dir=$(readlink -f ${repo_dir})
 docker_image_name1="docker-ops-private1"
 docker_image_name2="docker-ops-private2"
+docker_registry1="docker-registry1.ai-traders.com"
 
 function clean_docker_images {
   tags=$(docker images docker-registry1.ai-traders.com/${docker_image_name1} | awk '{print $2}' | tail -n +2)
@@ -27,19 +28,18 @@ function clean_docker_images {
 
 @test "./tasks build" {
   rm -rf "${repo_dir}/.git" ${repo_dir}/image1/imagerc*  ${repo_dir}/image2/imagerc*
-  run /bin/bash -c "cd ${repo_dir} && git init && git add --all && git commit -m first && ./tasks build"
-  assert_output --partial "docker build -t ${docker_image_name1}"
-  assert_output --partial "docker build -t ${docker_image_name2}"
+  run /bin/bash -c "cd ${repo_dir} && git init && git add --all && git commit -m first && dryrun=true ./tasks build"
+  assert_output --partial "docker build -t ${docker_registry1}/${docker_image_name1}"
+  assert_output --partial "docker build -t ${docker_registry1}/${docker_image_name2}"
   assert_output --partial "Successfully built"
-  assert_output --partial "Not running docker push, because ops_docker_push=false"
   assert_equal "$status" 0
 
   run cat ${repo_dir}/image1/imagerc1
-  assert_output --partial "export AIT_DOCKER_REGISTRY=\"docker-registry1.ai-traders.com\""
-  assert_output --partial "export AIT_DOCKER_IMAGE_SHORT_NAME=\"${docker_image_name1}\""
-  assert_output --partial "export AIT_DOCKER_IMAGE_NAME=\"docker-registry1.ai-traders.com/${docker_image_name1}\""
-  assert_output --partial "export AIT_DOCKER_IMAGE_TAG="
-  assert_output --partial "export AIT_DOCKER_IMAGE_URL=\"docker-registry1.ai-traders.com/${docker_image_name1}:"
+  assert_output --partial "export KUDU_DOCKER_REGISTRY=\"docker-registry1.ai-traders.com\""
+  assert_output --partial "export KUDU_DOCKER_IMAGE_SHORT_NAME=\"${docker_image_name1}\""
+  assert_output --partial "export KUDU_DOCKER_IMAGE_NAME=\"docker-registry1.ai-traders.com/${docker_image_name1}\""
+  assert_output --partial "export KUDU_DOCKER_IMAGE_TAG="
+  assert_output --partial "export KUDU_DOCKER_IMAGE_URL=\"docker-registry1.ai-traders.com/${docker_image_name1}:"
   assert_equal "$status" 0
 
   run cat ${repo_dir}/image1/imagerc1.yml
@@ -59,11 +59,11 @@ function clean_docker_images {
   assert_equal "$status" 0
 
   run cat ${repo_dir}/image2/imagerc2
-  assert_output --partial "export AIT_DOCKER_REGISTRY=\"docker-registry1.ai-traders.com\""
-  assert_output --partial "export AIT_DOCKER_IMAGE_SHORT_NAME=\"${docker_image_name2}\""
-  assert_output --partial "export AIT_DOCKER_IMAGE_NAME=\"docker-registry1.ai-traders.com/${docker_image_name2}\""
-  assert_output --partial "export AIT_DOCKER_IMAGE_TAG="
-  assert_output --partial "export AIT_DOCKER_IMAGE_URL=\"docker-registry1.ai-traders.com/${docker_image_name2}:"
+  assert_output --partial "export KUDU_DOCKER_REGISTRY=\"docker-registry1.ai-traders.com\""
+  assert_output --partial "export KUDU_DOCKER_IMAGE_SHORT_NAME=\"${docker_image_name2}\""
+  assert_output --partial "export KUDU_DOCKER_IMAGE_NAME=\"docker-registry1.ai-traders.com/${docker_image_name2}\""
+  assert_output --partial "export KUDU_DOCKER_IMAGE_TAG="
+  assert_output --partial "export KUDU_DOCKER_IMAGE_URL=\"docker-registry1.ai-traders.com/${docker_image_name2}:"
   assert_equal "$status" 0
 
   run cat ${repo_dir}/image2/imagerc2.yml
@@ -82,7 +82,7 @@ function clean_docker_images {
   assert_output --partial "\"docker_image_url\": \"docker-registry1.ai-traders.com/${docker_image_name2}:"
   assert_equal "$status" 0
 
-  # do not rm .git directory or imagerc* files, we need the docker tag kept
+  # do not rm .git directory or imagerc* files, we need to keep the docker tag
 }
 @test "./tasks test" {
   run /bin/bash -c "cd ${repo_dir} && ./tasks test"
@@ -91,7 +91,7 @@ function clean_docker_images {
   assert_output --partial "2 tests, 0 failures"
   assert_equal "$status" 0
 
-  # do not rm .git directory or imagerc* files, we need the docker tag kept
+  # do not rm .git directory or imagerc* files, we need to keep the docker tag
 }
 @test "./tasks example" {
   run /bin/bash -c "cd ${repo_dir} && ./tasks example"
@@ -101,7 +101,7 @@ function clean_docker_images {
   assert_output --partial "bye from the image"
   assert_equal "$status" 0
 
-  # do not rm .git directory or imagerc* files, we need the docker tag kept
+  # do not rm .git directory or imagerc* files, we need to keep the docker tag
 }
 @test "./tasks verify_version" {
   run /bin/bash -c "cd ${repo_dir} && ./tasks verify_version"
@@ -109,11 +109,11 @@ function clean_docker_images {
 }
 @test "./tasks publish" {
   run /bin/bash -c "cd ${repo_dir} && dryrun=true ./tasks publish"
-  assert_output --partial "docker tag -f docker-registry1.ai-traders.com/${docker_image_name1}:"
+  assert_output --partial "docker tag docker-registry1.ai-traders.com/${docker_image_name1}:"
   assert_output --partial "docker-registry1.ai-traders.com/${docker_image_name1}:0.1.0"
   assert_output --partial "docker-registry1.ai-traders.com/${docker_image_name1}:latest"
   assert_output --partial "Not running push, dryrun=true"
-  assert_output --partial "docker tag -f docker-registry1.ai-traders.com/${docker_image_name2}:"
+  assert_output --partial "docker tag docker-registry1.ai-traders.com/${docker_image_name2}:"
   assert_output --partial "docker-registry2.ai-traders.com/${docker_image_name2}:0.1.0"
   assert_output --partial "docker-registry2.ai-traders.com/${docker_image_name2}:latest"
   assert_equal "$status" 0

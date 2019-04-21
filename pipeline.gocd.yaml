@@ -1,25 +1,17 @@
+format_version: 3
 pipelines:
   docker-ops:
     group: platform
     label_template: "${git[:8]}"
     materials:
       git:
-        git: "git@git.ai-traders.com:platform/docker-ops.git"
-        branch: master
+        type: configrepo
         blacklist:
           - "**/*.md"
     stages:
       - test:
           clean_workspace: true
           jobs:
-            verify_version:
-              elastic_profile_id: w.c1.m1024.e5
-              tasks:
-                - exec:
-                    command: /bin/bash
-                    arguments:
-                      - -c
-                      - ./tasks verify_version
             itest:
               elastic_profile_id: w.c1.m1024.e5
               tasks:

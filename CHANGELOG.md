@@ -1,3 +1,10 @@
+### 2.0.0 - Unreleased
+
+Rewrites and updates for public release
+ * prefix in variables to `KUDU_` from `AIT_`
+ * default registry is public on dockerhub. Therefore no prefix before image name.
+ * resign from `ops_docker_push=true`, instead build and push are separate ops
+
 ### 0.3.3 (2019-Feb-02)
 
 * use releaser 1.1.0

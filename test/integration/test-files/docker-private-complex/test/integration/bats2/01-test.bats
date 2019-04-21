@@ -1,7 +1,7 @@
 load '/opt/bats-support/load.bash'
 load '/opt/bats-assert/load.bash'
 
-docker_image="${AIT_DOCKER_IMAGE_URL}"
+docker_image="${KUDU_DOCKER_IMAGE_URL}"
 docker_container="docker-ops-test"
 
 @test "initialize tests" {

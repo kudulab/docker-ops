@@ -15,7 +15,7 @@ docker_ops::program_name() {
   echo "DOCKER-OPS"
 }
 docker_ops::log_debug() {
-  if [ "${RELEASER_LOG_LEVEL}" == "debug" ]; then
+  if [ "${DOCKER_OPS_LOG_LEVEL}" == "debug" ]; then
     echo -e "$(date "+%d-%m-%Y %T") $(docker_ops::program_name) debug: ${1}" >&2
   fi
 }
@@ -38,6 +38,36 @@ function docker_ops::loaded {
   return 0
 }
 
+# Returns full url to the docker image, with registry, name and tag
+# Arguments:
+# - short image name
+# - image tag
+# - (optional) docker registry (default is dockerhub)
+function docker_ops::make_image_url {
+  local image_name=${1?image_name not set}
+  local image_tag=${2?image_tag not set}
+  local image_registry="${3:-dockerhub}"
+  local image_url="${image_name}:${image_tag}"
+  if [ "${image_registry}" != "dockerhub" ]; then
+    image_url="${image_registry}/${image_url}"
+  fi
+  echo "${image_url}"
+}
+
+# Returns url to the docker image with registry and name but without tag
+# Arguments:
+# - short image name
+# - (optional) docker registry (default is dockerhub)
+function docker_ops::make_image_name {
+  local image_name=${1?image_name not set}
+  local image_registry="${2:-dockerhub}"
+  local image_url="${image_name}"
+  if [ "${image_registry}" != "dockerhub" ]; then
+    image_url="${image_registry}/${image_url}"
+  fi
+  echo "${image_url}"
+}
+
 # Creates files to be treated as build artifacts. Those files will contain:
 # image name, image tag and the image registry which will be used to push_tmp
 # a docker image. You should use this function once for each image (even if
@@ -45,31 +75,60 @@ function docker_ops::loaded {
 function docker_ops::create_imagerc {
   local image_dir=${1?image_dir not set}
   local imagerc_filename=${2?imagerc_filename not set}
-  local image_name=${3?image_name not set}
+  local image_short_name=${3?image_name not set}
   local image_tag=${4?image_tag not set}
-  local image_registry=${5?image_registry not set}
+  local image_registry=${5:-dockerhub}
+
+  local image_name="$(docker_ops::make_image_name $image_short_name $image_registry)"
+  local image_url="$(docker_ops::make_image_url $image_short_name $image_tag $image_registry)"
 
   mkdir -p "${image_dir}"
-  echo "export AIT_DOCKER_REGISTRY=\"${image_registry}\"" > "${image_dir}/${imagerc_filename}"
-  echo "export AIT_DOCKER_IMAGE_SHORT_NAME=\"${image_name}\"" >> "${image_dir}/${imagerc_filename}"
-  echo "export AIT_DOCKER_IMAGE_NAME=\"${image_registry}/${image_name}\"" >> "${image_dir}/${imagerc_filename}"
-  echo "export AIT_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${image_dir}/${imagerc_filename}"
-  echo "export AIT_DOCKER_IMAGE_URL=\"${image_registry}/${image_name}:${image_tag}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export KUDU_DOCKER_REGISTRY=\"${image_registry}\"" > "${image_dir}/${imagerc_filename}"
+  echo "export KUDU_DOCKER_IMAGE_SHORT_NAME=\"${image_short_name}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export KUDU_DOCKER_IMAGE_NAME=\"${image_name}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export KUDU_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export KUDU_DOCKER_IMAGE_URL=\"${image_url}\"" >> "${image_dir}/${imagerc_filename}"
 
   echo "{ " > "${image_dir}/${imagerc_filename}.json"
   echo "\"docker_registry\": \"${image_registry}\"," >> "${image_dir}/${imagerc_filename}.json"
-  echo "\"docker_image_short_name\": \"${image_name}\"," >> "${image_dir}/${imagerc_filename}.json"
-  echo "\"docker_image_name\": \"${image_registry}/${image_name}\"," >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_short_name\": \"${image_short_name}\"," >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_name\": \"${image_name}\"," >> "${image_dir}/${imagerc_filename}.json"
   echo "\"docker_image_tag\": \"${image_tag}\"," >> "${image_dir}/${imagerc_filename}.json"
-  echo "\"docker_image_url\": \"${image_registry}/${image_name}:${image_tag}\"" >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_url\": \"${image_url}\"" >> "${image_dir}/${imagerc_filename}.json"
   echo "}" >> "${image_dir}/${imagerc_filename}.json"
 
   echo "---" > "${image_dir}/${imagerc_filename}.yml"
   echo "docker_registry: \"${image_registry}\"" >> "${image_dir}/${imagerc_filename}.yml"
-  echo "docker_image_short_name: \"${image_name}\"" >> "${image_dir}/${imagerc_filename}.yml"
-  echo "docker_image_name: \"${image_registry}/${image_name}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_short_name: \"${image_short_name}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_name: \"${image_name}\"" >> "${image_dir}/${imagerc_filename}.yml"
   echo "docker_image_tag: \"${image_tag}\"" >> "${image_dir}/${imagerc_filename}.yml"
-  echo "docker_image_url: \"${image_registry}/${image_name}:${image_tag}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_url: \"${image_url}\"" >> "${image_dir}/${imagerc_filename}.yml"
+}
+
+function docker_ops::docker_build {
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
+  local image_short_name=${3?image_short_name not set}
+  local image_tag=${4:-}
+  local image_registry=${5:-dockerhub}
+
+  docker_ops::log_info "image_dir set to: ${image_dir}"
+  docker_ops::log_info "image_short_name set to: ${image_short_name}"
+  docker_ops::log_info "imagerc_filename set to: ${imagerc_filename}"
+  initial_dir="$(pwd)"
+  cd "${image_dir}"
+  if [[ -z "${image_tag}" ]];then
+    # set to the latest git commit hash
+    image_tag=$(git rev-parse HEAD)
+    docker_ops::log_info "image_tag was not set, using git sha: ${image_tag}"
+  fi
+  docker_ops::log_info "image_tag set to: ${image_tag}"
+  local image_url="$(docker_ops::make_image_url $image_short_name $image_tag $image_registry)"
+
+  set -x -e
+  docker build ${docker_build_options} -t "${image_url}" .
+  cd "${initial_dir}"
+  docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_short_name}" "${image_tag}" "${image_registry}"
 }
 
 function docker_ops::source_imagerc {
@@ -77,64 +136,56 @@ function docker_ops::source_imagerc {
   local imagerc_filename=${2?imagerc_filename not set}
   set -eu
   source "${image_dir}/${imagerc_filename}"
-  echo "Sourced: ${image_dir}/${imagerc_filename}. Image is: ${AIT_DOCKER_REGISTRY}/${AIT_DOCKER_IMAGE_SHORT_NAME}:${AIT_DOCKER_IMAGE_TAG}"
+  echo "Sourced: ${image_dir}/${imagerc_filename}. Image is: ${KUDU_DOCKER_IMAGE_URL}"
+}
+
+function docker_ops::push {
+  local image_dir=${1?image_dir not set}
+  local imagerc_filename=${2?imagerc_filename not set}
+
+  docker_ops::source_imagerc "$image_dir" "$imagerc_filename"
+  if [[ "${dryrun}" != "true" ]];then
+    docker push "${KUDU_DOCKER_IMAGE_URL}"
+  fi
 }
 
 # This function ensures that the temporary image (= not published with a pretty
 # tag to production docker registry) exists locally.
-function docker_ops::ensure_temp_image {
+function docker_ops::ensure_pulled_image {
   local image_dir=${1?image_dir not set}
   local imagerc_filename=${2?imagerc_filename not set}
 
   set -e
   docker_ops::source_imagerc "${image_dir}" "${imagerc_filename}"
-  local temp_image="${AIT_DOCKER_REGISTRY}/${AIT_DOCKER_IMAGE_SHORT_NAME}:${AIT_DOCKER_IMAGE_TAG}"
-  if ! docker inspect -f='{{.Id}}' "${temp_image}" 1>/dev/null 2>&1; then
-      # image does not exist locally, so it must have been already
-      # pushed but under a temporary tag
-      ( set -x; docker pull "${temp_image}"; )
+  local tmp_image="${KUDU_DOCKER_IMAGE_URL}"
+  if ! docker inspect -f='{{.Id}}' "${tmp_image}" 1>/dev/null 2>&1; then
+      # image does not exist locally
+      ( set -x; docker pull "${tmp_image}"; )
   fi
 }
 
-# Runs a "docker push" on a locally existing, just created, docker image.
-function docker_ops::push_tmp {
-  local image_name=${1?image_name not set}
-  local image_tag=${2?image_tag not set}
-  local image_registry=${3?image_registry not set}
-
-  (set -x; docker tag "${image_name}:${image_tag}" "${image_registry}/${image_name}:${image_tag}"; )
-  if [[ "${ops_docker_push}" != "false" ]]; then
-    (set -x; docker push "${image_registry}/${image_name}:${image_tag}"; )
-  else
-    echo "Not running docker push, because ops_docker_push=${ops_docker_push}"
-  fi
-}
-
-# Runs a "docker push" on an image that was:
-# * either already pushed but under a temporary tag (to a registry specified
-# in imagerc file)
-# * just created and has a temporary tag (no registry set)
-function docker_ops::push_production {
+# Runs "docker push" on an image sourced from image_dir
+# Retags the image to new registry, name and tag as specified in arguments
+function docker_ops::retag_push {
   local image_dir=${1?image_dir not set}
   local imagerc_filename=${2?imagerc_filename not set}
-  local image_name=${3?image_name not set}
+  local image_short_name=${3?image_short_name not set}
   local image_tag=${4?image_tag not set}
-  local image_registry=${5?image_registry not set}
+  local image_registry=${5:-dockerhub}
+
+  local production_image_name="$(docker_ops::make_image_name $image_short_name $image_registry)"
 
   set -e
-  docker_ops::ensure_temp_image "${image_dir}" "${imagerc_filename}"
-  local temp_image="${AIT_DOCKER_REGISTRY}/${AIT_DOCKER_IMAGE_SHORT_NAME}:${AIT_DOCKER_IMAGE_TAG}"
-  # For Docker <=1.8.3, we can use `docker tag -f`.
-  # Otherwise, e.g. Docker 1.12, there is no `-f` option, but `docker tag`
-  # always works as if force was used.
+  docker_ops::ensure_pulled_image "${image_dir}" "${imagerc_filename}"
+  local tmp_image="${KUDU_DOCKER_IMAGE_URL}"
   set -x
-  docker tag -f "${temp_image}" "${image_registry}/${image_name}:${image_tag}" 2>/dev/null || docker tag "${temp_image}" "${image_registry}/${image_name}:${image_tag}"
-  docker tag -f "${temp_image}" "${image_registry}/${image_name}:latest" 2>/dev/null || docker tag "${temp_image}" "${image_registry}/${image_name}:latest"
+  docker tag "${tmp_image}" "${production_image_name}:${image_tag}"
+  docker tag "${tmp_image}" "${production_image_name}:latest"
   set +x
   if [[ "${dryrun}" != "true" ]]; then
     set -x
-    docker push "${image_registry}/${image_name}:${image_tag}"
-    docker push "${image_registry}/${image_name}:latest"
+    docker push "${production_image_name}:${image_tag}"
+    docker push "${production_image_name}:latest"
     set +x
   else
     echo "Not running push, dryrun=${dryrun}"
@@ -142,85 +193,9 @@ function docker_ops::push_production {
   set +x
 }
 
-function docker_build {
-  local image_dir=${1?image_dir not set}
-  local imagerc_filename=${2?imagerc_filename not set}
-  # here image_name contains registry, e.g. docker-registry.ai-traders.com/abc:1.2.3
-  local image_name=${3?image_name not set}
-  local image_tag=${4?image_tag not set}
-
-  #docker_ops::log_warn "Running obsolete docker_build function. Please use image_dir set to: ${image_dir}"
-  docker_ops::log_info "image_dir set to: ${image_dir}"
-  docker_ops::log_info "image_name set to: ${image_name}"
-  docker_ops::log_info "imagerc_filename set to: ${imagerc_filename}"
-  initial_dir="$(pwd)"
-  cd "${image_dir}"
-  if [[ -z "${image_tag}" ]];then
-    # set to the latest git commit hash
-    image_tag=$(git rev-parse HEAD)
-  fi
-  docker_ops::log_info "image_tag set to: ${image_tag}"
-
-  set -x -e
-  docker build ${docker_build_options} -t "${image_name}:${image_tag}" .
-  registry="$(echo $image_name | cut -d "/" -f 1)"
-  docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${registry}"
-  if [[ "${dryrun}" != "true" && "${ops_docker_push}" != "false" ]];then
-    docker push "${image_name}:${image_tag}"
-  fi
-  cd "${initial_dir}"
-  set +x +e
-}
-function source_imagerc {
-  local image_dir=${1?image_dir not set}
-  local imagerc_filename=${2?imagerc_filename not set}
-
-  docker_ops::source_imagerc "${image_dir}" "${imagerc_filename}"
-}
-function docker_push {
-  image_name="$1"
-  testing_image_tag="$2"
-  production_image_tag="$3"
-
-  if [[ -z "${image_name}" ]];then
-    docker_ops::log_error "image_name not set"
-    return 1
-  fi
-  docker_ops::log_info "image_name set to: ${image_name}"
-  if [[ -z "${testing_image_tag}" ]];then
-    docker_ops::log_error "testing_image_tag not set"
-    return 1
-  fi
-  docker_ops::log_info "testing_image_tag set to: ${testing_image_tag}"
-  if [[ -z "${production_image_tag}" ]];then
-    docker_ops::log_error "production_image_tag not set"
-    return 1
-  fi
-  docker_ops::log_info "production_image_tag set to: ${production_image_tag}"
-  if ! docker images ${image_name} | awk '{print $2}' | grep ${testing_image_tag} 1>/dev/null ; then
-    # if docker image does not exist locally, then "docker tag" will fail,
-    # so pull it. However, do not always pull it, the image may be not pushed
-    # and only available locally.
-    set -x -e
-    docker pull "${image_name}:${testing_image_tag}"
-  fi
-  set -x -e
-  # When tagging a docker image using docker 1.8.3, we can use `docker tag -f`.
-  # When using docker 1.12, there is no `-f` option, but `docker tag`
-  # always works as if force was used.
-  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:${production_image_tag}" || docker tag "${image_name}:${testing_image_tag}" "${image_name}:${production_image_tag}"
-  docker tag -f "${image_name}:${testing_image_tag}" "${image_name}:latest" || docker tag "${image_name}:${testing_image_tag}" "${image_name}:latest"
-  if [[ "${dryrun}" != "true" ]];then
-    docker push "${image_name}:${production_image_tag}"
-    docker push "${image_name}:latest"
-  fi
-  set +x +e
-}
-
 ### Defaults
 # allow those variables to be already set, so that user can set them in cli
 imagerc_filename="${imagerc_filename:-imagerc}"
 docker_build_options="${docker_build_options:-}"
-ops_docker_push="${ops_docker_push:-false}"
 dryrun="${dryrun:-false}"
-RELEASER_LOG_LEVEL="${RELEASER_LOG_LEVEL:-info}"
+DOCKER_OPS_LOG_LEVEL="${DOCKER_OPS_LOG_LEVEL:-info}"
