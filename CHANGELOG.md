@@ -1,4 +1,4 @@
-### 2.0.0 - Unreleased
+### 2.0.0 (2019-Apr-21)
 
 Rewrites and updates for public release
  * prefix in variables to `KUDU_` from `AIT_`

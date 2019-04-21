@@ -8,7 +8,7 @@ All the docker-ops functions are available after you install it.
 ### In current shell
 If you want to run docker-ops in current shell:
 ```bash
-docker_ops::loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.0/docker-ops)"
+docker_ops::loaded || eval "$(curl https://github.com/kudulab/docker-ops/releases/download/${DOCKER_OPS_VERSION}/docker-ops)"
 ```
  Do not use it in a script as it would always redownload the file.
 
@@ -16,12 +16,14 @@ docker_ops::loaded || eval "$(curl http://archive.ai-traders.com/docker-ops/0.1.
 
 If you want to run docker-ops from a script:
 ```bash
-if [[ ! -f ./docker-ops ]];then
-  timeout 2 wget -O docker-ops --quiet http://http.archive.ai-traders.com/docker-ops/0.2.4/docker-ops || { echo "Cannot download docker-ops, ignoring"; rm -f ./docker-ops; }
+DOCKER_OPS_VERSION="2.0.0"
+DOCKER_OPS_FILE=".ops/docker-ops-${DOCKER_OPS_VERSION}"
+
+mkdir -p .ops
+if [[ ! -f $DOCKER_OPS_FILE ]];then
+  wget --quiet -O $DOCKER_OPS_FILE https://github.com/kudulab/docker-ops/releases/download/${DOCKER_OPS_VERSION}/docker-ops
 fi
-if [[ -f ./docker-ops ]];then
-  source ./docker-ops
-fi
+source $DOCKER_OPS_FILE
 ```
 
 ### Validate that loaded
@@ -44,7 +46,7 @@ At the top of file download supporting docker-ops script:
 set -e
 
 DOCKER_OPS_VERSION="2.0.0"
-DOCKER_OPS_FILE=".ops/releaser-${DOCKER_OPS_VERSION}"
+DOCKER_OPS_FILE=".ops/docker-ops-${DOCKER_OPS_VERSION}"
 
 mkdir -p .ops
 if [[ ! -f $DOCKER_OPS_FILE ]];then
@@ -112,17 +114,13 @@ When `image_registry=dockerhub` then image name prefix with registry is skipped.
 
 ### Lifecycle
 1. In a feature branch:
- * you make changes
- * and run tests:
+  * you make changes
+  * and run tests:
      * `./tasks itest`
 1. You decide that your changes are ready and you:
- * merge into master branch
- * run locally:
-   * `./tasks set_version` to set version in CHANGELOG and chart version files to
-   the version from OVersion backend
-   * e.g. `./tasks set_version 1.2.3` to set version in CHANGELOG and chart version
-    files and in OVersion backend to 1.2.3
- * push to master onto private git server
+  * merge into master branch
+  * run locally:
+    * `./tasks set_version` to set version in CHANGELOG while bumping patch version
+    * e.g. `./tasks set_version 1.2.3` to set version in CHANGELOG
+  * push to master onto private git server
 1. CI server (GoCD) tests and releases.
-
-Releaser uses itself, which is treated as true integration test.
