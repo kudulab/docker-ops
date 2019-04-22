@@ -17,9 +17,9 @@ docker_ops::loaded || eval "$(curl https://github.com/kudulab/docker-ops/release
 If you want to run docker-ops from a script:
 ```bash
 DOCKER_OPS_VERSION="2.0.0"
-DOCKER_OPS_FILE=".ops/docker-ops-${DOCKER_OPS_VERSION}"
+DOCKER_OPS_FILE="ops/docker-ops-${DOCKER_OPS_VERSION}"
 
-mkdir -p .ops
+mkdir -p ops
 if [[ ! -f $DOCKER_OPS_FILE ]];then
   wget --quiet -O $DOCKER_OPS_FILE https://github.com/kudulab/docker-ops/releases/download/${DOCKER_OPS_VERSION}/docker-ops
 fi
@@ -46,9 +46,9 @@ At the top of file download supporting docker-ops script:
 set -e
 
 DOCKER_OPS_VERSION="2.0.0"
-DOCKER_OPS_FILE=".ops/docker-ops-${DOCKER_OPS_VERSION}"
+DOCKER_OPS_FILE="ops/docker-ops-${DOCKER_OPS_VERSION}"
 
-mkdir -p .ops
+mkdir -p ops
 if [[ ! -f $DOCKER_OPS_FILE ]];then
   wget --quiet -O $DOCKER_OPS_FILE https://github.com/kudulab/docker-ops/releases/download/${DOCKER_OPS_VERSION}/docker-ops
 fi
