@@ -13,7 +13,7 @@ Use the functions as you like, but the primary goal is to support following **li
 1. Build image from source code and tag it with the git sha256 of the origin commit. Push this image to docker registry. We call it the *temp* image.
    * Supporting function is `docker_ops::docker_build`.
    * `docker_ops::docker_build` produces 3 [`imagerc` files](#imagerc-files), each has the same data in different format (JSON, YAML, bash). It contains critical information about the built image - the docker registry, image name, image tag.
-2. Pull the *temp* image (if not available locally) with `docker_ops::ensure_pulled_image`. Test the image to ensure desired level of quality. Use the right tools for the job, `docker-ops` has nothing to do with this step.
+2. Pull the *temp* image with `docker_ops::ensure_pulled_image`. Pull is needed if image not available locally, e.g. when other CI-agent has built the image than the one testing it. Then test the image to ensure desired level of quality. Use the right tools for the job, `docker-ops` has nothing to do with image testing.
 3. Release the code by git tagging the repository with a semantic version. (This is handled by the [releaser](https://github.com/kudulab/releaser))
 4. Publish the image by tagging the previously built image with a semantic version and pushing the new tag to docker registry.
 
@@ -166,15 +166,14 @@ When `image_registry=dockerhub` then image name prefix with registry is skipped.
 
 ### Lifecycle
 1. In a feature branch:
-  * you make changes
-  * and run tests:
-     * `./tasks itest`
+    * you make changes
+    * run tests with `./tasks itest`
 1. You decide that your changes are ready and you:
-  * merge into master branch
-  * run locally:
-    * `./tasks set_version` to set version in CHANGELOG while bumping patch version
-    * e.g. `./tasks set_version 1.2.3` to set version in CHANGELOG
-  * push to master onto private git server
+    * merge into master branch
+    * run locally:
+       * `./tasks set_version` to set version in CHANGELOG while bumping patch version
+       * e.g. `./tasks set_version 1.2.3` to set version in CHANGELOG
+    * push to master
 1. CI server (GoCD) tests and releases.
 
 ## License
