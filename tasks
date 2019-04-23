@@ -37,8 +37,7 @@ case "${command}" in
         --user kudulab \
         --repo docker-ops \
         --tag $VERSION \
-        --name $VERSION \
-        --pre-release
+        --name $VERSION
 
       $GHRELEASE_BIN upload \
         --user kudulab \
