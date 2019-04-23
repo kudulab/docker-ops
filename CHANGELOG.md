@@ -1,3 +1,8 @@
+### 2.0.1 (2019-Apr-23)
+
+ * updated readme
+ * updated releaser to 2.1.0
+
 ### 2.0.0 (2019-Apr-21)
 
 Rewrites and updates for public release
