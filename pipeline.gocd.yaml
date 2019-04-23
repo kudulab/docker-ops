@@ -35,6 +35,8 @@ pipelines:
           clean_workspace: true
           jobs:
             code:
+              secure_variables:
+                VAULT_TOKEN: "AES:oo4qyY+eEf1piu8V4vy4hg==:nnH/4ulwI2JgjBtBiR+LGtB+PLLWVdtsCm+CIgjNHwj+qYXlvxWbN0+RS/tSi60N"
               elastic_profile_id: w.c1.m1024.e5
               tasks:
                 - exec:

@@ -2,14 +2,24 @@
 
 set -e
 
+SECRET_OPS_VERSION="0.6.2"
 RELEASER_VERSION="2.1.0"
+
 RELEASER_FILE="ops/releaser-${RELEASER_VERSION}"
+SECRET_OPS_FILE="ops/secret-ops"
+SECRET_OPS_TAR_FILE="ops/secret-ops-${SECRET_OPS_VERSION}.tar.gz"
 
 mkdir -p ops
 if [[ ! -f $RELEASER_FILE ]];then
   wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/${RELEASER_VERSION}/releaser
 fi
 source $RELEASER_FILE
+
+if [[ ! -f $SECRET_OPS_TAR_FILE ]];then
+  wget --quiet -O $SECRET_OPS_TAR_FILE https://github.com/kudulab/secret-ops/releases/download/${SECRET_OPS_VERSION}/secret-ops.tar.gz
+  tar -xf $SECRET_OPS_TAR_FILE -C ops
+fi
+source $SECRET_OPS_FILE
 
 command="$1"
 case "${command}" in
@@ -31,6 +41,8 @@ case "${command}" in
       ;;
   publish)
       # publish the just released version
+      GITHUB_TOKEN=$(vault read -field=token secret/gocd/github_releases)
+      export GITHUB_TOKEN
       VERSION=$(releaser::get_last_git_tagged_version)
       releaser::prepare_github_release_bin
       $GHRELEASE_BIN release \
@@ -45,6 +57,12 @@ case "${command}" in
         --tag $VERSION \
         --name "docker-ops" \
         --file src/docker-ops
+      ;;
+  generate_vault_token)
+      vault_token=$(vault token create -ttl=48h -policy=gocd -field token -metadata gocd_renew=true)
+      secured_token_gocd=$(secret_ops::encrypt_with_gocd_top "${vault_token}")
+      echo "Generated token: ${vault_token} and encrypted by GoCD server"
+      secret_ops::insert_vault_token_gocd_yaml "${secured_token_gocd}"
       ;;
   *)
       echo "Invalid command: '${command}'"
