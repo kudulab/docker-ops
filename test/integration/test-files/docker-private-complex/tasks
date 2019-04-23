@@ -2,9 +2,9 @@
 
 set -e
 RELEASER_VERSION="2.0.0"
-RELEASER_FILE=".ops/releaser-${RELEASER_VERSION}"
+RELEASER_FILE="ops/releaser-${RELEASER_VERSION}"
 
-mkdir -p .ops
+mkdir -p ops
 if [[ ! -f $RELEASER_FILE ]];then
   wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/2.0.0/releaser
 fi

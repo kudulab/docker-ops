@@ -2,12 +2,12 @@
 
 set -e
 
-RELEASER_VERSION="2.0.0"
-RELEASER_FILE=".ops/releaser-${RELEASER_VERSION}"
+RELEASER_VERSION="2.1.0"
+RELEASER_FILE="ops/releaser-${RELEASER_VERSION}"
 
-mkdir -p .ops
+mkdir -p ops
 if [[ ! -f $RELEASER_FILE ]];then
-  wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/2.0.0/releaser
+  wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/${RELEASER_VERSION}/releaser
 fi
 source $RELEASER_FILE
 
@@ -17,7 +17,7 @@ case "${command}" in
       releaser::bump_changelog_version "$2" "$3"
       ;;
   verify_version)
-      releaser::verify_version_for_release
+      releaser::verify_release_ready
       ;;
   itest)
       time bats ./test/integration/*.bats
@@ -26,7 +26,7 @@ case "${command}" in
       ./tasks itest
       ;;
   release)
-      releaser::verify_version_for_release
+      releaser::verify_release_ready
       releaser::git_tag_from_changelog
       ;;
   publish)
