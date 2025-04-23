@@ -32,6 +32,7 @@ jobs:
           # set up git
           git config --global init.defaultBranch main
           git config --global user.name xmik
+          git config --global user.email dummy.email.for.testing@dummy.email.for.testing
 
           # for docker containers
           export TERM=xterm
