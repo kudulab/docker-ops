@@ -1,6 +1,8 @@
-### 2.1.2 (2025-Apr-23)
+### 2.1.3 (2025-Apr-24)
 
-### 2.1.1 (2025-Apr-23)
+* add an option to set docker platform while pushing a docker image (https://docs.docker.com/reference/cli/docker/buildx/build/#platform)
+
+### 2.1.1, 2.1.2 (2025-Apr-23)
 
 * fix github release
 

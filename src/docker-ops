@@ -83,7 +83,7 @@ function docker_ops::create_imagerc {
   local image_short_name=${3?image_name not set}
   local image_tag=${4?image_tag not set}
   local image_registry=${5:-dockerhub}
-  local image_platform=${6:-platform}
+  local image_platform=${6:-}
 
   local image_name="$(docker_ops::make_image_name $image_short_name $image_registry)"
   local image_url="$(docker_ops::make_image_url $image_short_name $image_tag $image_registry)"
@@ -161,7 +161,12 @@ function docker_ops::push {
 
   docker_ops::source_imagerc "$image_dir" "$imagerc_filename"
   if [[ "${dryrun}" != "true" ]];then
-    docker push "${KUDU_DOCKER_IMAGE_URL}"
+    if [[ -z "${KUDU_DOCKER_IMAGE_PLATFORM}" ]];then
+      # platform not set
+      docker push "${KUDU_DOCKER_IMAGE_URL}"
+    else
+      docker push  --platform "${KUDU_DOCKER_IMAGE_PLATFORM}" "${KUDU_DOCKER_IMAGE_URL}"
+    fi
   fi
 }
 
@@ -188,6 +193,7 @@ function docker_ops::retag_push {
   local image_short_name=${3?image_short_name not set}
   local image_tag=${4?image_tag not set}
   local image_registry=${5:-dockerhub}
+  local image_platform=${6:-}
 
   local production_image_name="$(docker_ops::make_image_name $image_short_name $image_registry)"
 
@@ -200,8 +206,15 @@ function docker_ops::retag_push {
   set +x
   if [[ "${dryrun}" != "true" ]]; then
     set -x
-    docker push "${production_image_name}:${image_tag}"
-    docker push "${production_image_name}:latest"
+    if [[ -z "${image_platform}" ]];then
+      # platform not set
+      docker push "${production_image_name}:${image_tag}"
+      docker push "${production_image_name}:latest"
+    else
+      docker push --platform "${image_platform}" "${production_image_name}:${image_tag}"
+      docker push --platform "${image_platform}"  "${production_image_name}:latest"
+    fi
+
     set +x
   else
     echo "Not running push, dryrun=${dryrun}"
