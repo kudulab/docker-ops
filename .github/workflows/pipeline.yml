@@ -25,9 +25,12 @@ jobs:
           sudo git clone https://github.com/bats-core/bats-support /opt/bats-support
           cd /opt/bats-core && sudo ./install.sh /usr/local
 
-          # setup git
+          # set up git
           git config --global init.defaultBranch main
           git config --global user.name xmik
+
+          # for docker containers
+          export TERM=xterm
 
           cd $repo_dir
           /bin/bash -c "./tasks test"
