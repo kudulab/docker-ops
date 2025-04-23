@@ -18,11 +18,16 @@ jobs:
       - uses: actions/checkout@v4
       - run: |
           repo_dir=$PWD
-          
+
+          # install bats
           sudo git clone https://github.com/bats-core/bats-core /opt/bats-core
           sudo git clone https://github.com/bats-core/bats-assert /opt/bats-assert
           sudo git clone https://github.com/bats-core/bats-support /opt/bats-support
           cd /opt/bats-core && sudo ./install.sh /usr/local
+
+          # setup git
+          git config --global init.defaultBranch main
+          git config --global user.name xmik
 
           cd $repo_dir
           /bin/bash -c "./tasks test"
