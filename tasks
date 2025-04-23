@@ -41,8 +41,6 @@ case "${command}" in
       ;;
   publish)
       # publish the just released version
-      GITHUB_TOKEN=$(vault read -field=token secret/gocd/github_releases)
-      export GITHUB_TOKEN
       VERSION=$(releaser::get_last_git_tagged_version)
       releaser::prepare_github_release_bin
       $GHRELEASE_BIN release \
@@ -57,12 +55,6 @@ case "${command}" in
         --tag $VERSION \
         --name "docker-ops" \
         --file src/docker-ops
-      ;;
-  generate_vault_token)
-      vault_token=$(vault token create -ttl=48h -policy=gocd -field token -metadata gocd_renew=true)
-      secured_token_gocd=$(secret_ops::encrypt_with_gocd_top "${vault_token}")
-      echo "Generated token: ${vault_token} and encrypted by GoCD server"
-      secret_ops::insert_vault_token_gocd_yaml "${secured_token_gocd}"
       ;;
   *)
       echo "Invalid command: '${command}'"

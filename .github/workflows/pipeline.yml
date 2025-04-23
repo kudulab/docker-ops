@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  verify_version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          /bin/bash -c "./tasks verify_version"
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          repo_dir=$PWD
+          
+          sudo git clone https://github.com/bats-core/bats-core /opt/bats-core
+          sudo git clone https://github.com/bats-core/bats-assert /opt/bats-assert
+          sudo git clone https://github.com/bats-core/bats-support /opt/bats-support
+          cd /opt/bats-core && sudo ./install.sh /usr/local
+
+          cd $repo_dir
+          /bin/bash -c "./tasks test"
+  release:
+    runs-on: ubuntu-latest
+    needs: [verify_version, test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          /bin/bash -c "./tasks release"
+  publish:
+    runs-on: ubuntu-latest
+    needs: [release]
+    environment: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+        run: |
+          /bin/bash -c "./tasks publish"
