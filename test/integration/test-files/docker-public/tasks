@@ -27,7 +27,12 @@ command="$1"
 case "${command}" in
   build_public)
       image_tag="${2:-temp}"
-      docker_ops::docker_build "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}"
+      docker_ops::docker_build "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${image_registry}"
+      exit $?
+      ;;
+  build_public_platform)
+      image_tag="${2:-temp}"
+      docker_ops::docker_build "${image_dir}" "${imagerc_filename}" "${image_name}" "${image_tag}" "${image_registry}" "linux/amd64"
       exit $?
       ;;
   test_public)

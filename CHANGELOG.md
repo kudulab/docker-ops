@@ -1,3 +1,7 @@
+### 2.1.0 (2025-Apr-23)
+
+* add an option to set docker platform while building a docker image (https://docs.docker.com/reference/cli/docker/buildx/build/#platform)
+
 ### 2.0.1 (2019-Apr-23)
 
  * updated readme

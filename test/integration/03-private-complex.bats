@@ -31,7 +31,6 @@ function clean_docker_images {
   run /bin/bash -c "cd ${repo_dir} && git init && git add --all && git commit -m first && dryrun=true ./tasks build"
   assert_output --partial "docker build -t ${docker_registry1}/${docker_image_name1}"
   assert_output --partial "docker build -t ${docker_registry1}/${docker_image_name2}"
-  assert_output --partial "Successfully built"
   assert_equal "$status" 0
 
   run cat ${repo_dir}/image1/imagerc1

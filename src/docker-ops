@@ -83,6 +83,7 @@ function docker_ops::create_imagerc {
   local image_short_name=${3?image_name not set}
   local image_tag=${4?image_tag not set}
   local image_registry=${5:-dockerhub}
+  local image_platform=${6:-platform}
 
   local image_name="$(docker_ops::make_image_name $image_short_name $image_registry)"
   local image_url="$(docker_ops::make_image_url $image_short_name $image_tag $image_registry)"
@@ -93,6 +94,7 @@ function docker_ops::create_imagerc {
   echo "export KUDU_DOCKER_IMAGE_NAME=\"${image_name}\"" >> "${image_dir}/${imagerc_filename}"
   echo "export KUDU_DOCKER_IMAGE_TAG=\"${image_tag}\"" >> "${image_dir}/${imagerc_filename}"
   echo "export KUDU_DOCKER_IMAGE_URL=\"${image_url}\"" >> "${image_dir}/${imagerc_filename}"
+  echo "export KUDU_DOCKER_IMAGE_PLATFORM=\"${image_platform}\"" >> "${image_dir}/${imagerc_filename}"
 
   echo "{ " > "${image_dir}/${imagerc_filename}.json"
   echo "\"docker_registry\": \"${image_registry}\"," >> "${image_dir}/${imagerc_filename}.json"
@@ -100,6 +102,7 @@ function docker_ops::create_imagerc {
   echo "\"docker_image_name\": \"${image_name}\"," >> "${image_dir}/${imagerc_filename}.json"
   echo "\"docker_image_tag\": \"${image_tag}\"," >> "${image_dir}/${imagerc_filename}.json"
   echo "\"docker_image_url\": \"${image_url}\"" >> "${image_dir}/${imagerc_filename}.json"
+  echo "\"docker_image_platform\": \"${image_platform}\"" >> "${image_dir}/${imagerc_filename}.json"
   echo "}" >> "${image_dir}/${imagerc_filename}.json"
 
   echo "---" > "${image_dir}/${imagerc_filename}.yml"
@@ -108,6 +111,7 @@ function docker_ops::create_imagerc {
   echo "docker_image_name: \"${image_name}\"" >> "${image_dir}/${imagerc_filename}.yml"
   echo "docker_image_tag: \"${image_tag}\"" >> "${image_dir}/${imagerc_filename}.yml"
   echo "docker_image_url: \"${image_url}\"" >> "${image_dir}/${imagerc_filename}.yml"
+  echo "docker_image_platform: \"${image_platform}\"" >> "${image_dir}/${imagerc_filename}.yml"
 }
 
 function docker_ops::docker_build {
@@ -116,10 +120,12 @@ function docker_ops::docker_build {
   local image_short_name=${3?image_short_name not set}
   local image_tag=${4:-}
   local image_registry=${5:-dockerhub}
+  local image_platform=${6:-}
 
   docker_ops::log_info "image_dir set to: ${image_dir}"
   docker_ops::log_info "image_short_name set to: ${image_short_name}"
   docker_ops::log_info "imagerc_filename set to: ${imagerc_filename}"
+  docker_ops::log_info "image_platform set to: ${image_platform}"
   initial_dir="$(pwd)"
   cd "${image_dir}"
   if [[ -z "${image_tag}" ]];then
@@ -131,9 +137,14 @@ function docker_ops::docker_build {
   local image_url="$(docker_ops::make_image_url $image_short_name $image_tag $image_registry)"
 
   set -x -e
-  docker build ${docker_build_options} -t "${image_url}" .
+  if [[ -z "${image_platform}" ]];then
+    docker_ops::log_info "image_platform was not set, not setting it further"
+    docker build ${docker_build_options} -t "${image_url}" .
+  else
+    docker build ${docker_build_options} --platform "${image_platform}" -t "${image_url}" .
+  fi
   cd "${initial_dir}"
-  docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_short_name}" "${image_tag}" "${image_registry}"
+  docker_ops::create_imagerc "${image_dir}" "${imagerc_filename}" "${image_short_name}" "${image_tag}" "${image_registry}" "${image_platform}"
 }
 
 function docker_ops::source_imagerc {

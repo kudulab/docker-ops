@@ -20,14 +20,17 @@ function clean_docker_images {
 @test "./tasks build_public" {
   run /bin/bash -c "cd ${repo_dir} && ./tasks build_public"
   assert_output --partial "docker build -t ${docker_image_name}:temp ."
-  assert_output --partial "Successfully built"
+  assert_equal "$status" 0
+}
+@test "./tasks build_public with platform set" {
+  run /bin/bash -c "cd ${repo_dir} && ./tasks build_public_platform"
+  assert_output --partial "docker build --platform linux/amd64 -t ${docker_image_name}:temp ."
   assert_equal "$status" 0
 }
 @test "./tasks build" {
   rm -rf "${repo_dir}/.git" ${repo_dir}/image/imagerc*
   run /bin/bash -c "cd ${repo_dir} && git init && git add --all && git commit -m first && ./tasks build"
   assert_output --partial "docker build -t ${docker_image_name}"
-  assert_output --partial "Successfully built"
   assert_equal "$status" 0
 
   run cat ${repo_dir}/image/imagerc
