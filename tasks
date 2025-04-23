@@ -39,23 +39,6 @@ case "${command}" in
       releaser::verify_release_ready
       releaser::git_tag_from_changelog
       ;;
-  publish)
-      # publish the just released version
-      VERSION=$(releaser::get_last_git_tagged_version)
-      releaser::prepare_github_release_bin
-      $GHRELEASE_BIN release \
-        --user kudulab \
-        --repo docker-ops \
-        --tag $VERSION \
-        --name $VERSION
-
-      $GHRELEASE_BIN upload \
-        --user kudulab \
-        --repo docker-ops \
-        --tag $VERSION \
-        --name "docker-ops" \
-        --file src/docker-ops
-      ;;
   *)
       echo "Invalid command: '${command}'"
       exit 1
