@@ -38,22 +38,17 @@ jobs:
 
           cd $repo_dir
           /bin/bash -c "./tasks test"
-  release:
-    id: tag
-    runs-on: ubuntu-latest
-    needs: [verify_version, test]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - run: |
-          /bin/bash -c "./tasks release"
-          echo "tag=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_OUTPUT 
-  publish:
+  tag_and_publish:
     runs-on: ubuntu-latest
     needs: [release]
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+      - name: Tag
+        id: tag
+        run: |
+          /bin/bash -c "./tasks release"
+          echo "tag=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_OUTPUT
       - name: Publish
         uses: softprops/action-gh-release@v2
         with:
